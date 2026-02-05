@@ -154,6 +154,11 @@ func (g *Generator) getTemplateName(split SplitType) string {
 }
 
 func (g *Generator) parseResponse(response string, expectedCount int) []Pair {
+	// Handle empty or whitespace-only responses
+	if len(strings.TrimSpace(response)) == 0 {
+		return []Pair{}
+	}
+
 	// Try to find and parse JSON array from response
 	// The LLM should return: [{"prompt": "...", "completion": "..."}, ...]
 
@@ -162,13 +167,8 @@ func (g *Generator) parseResponse(response string, expectedCount int) []Pair {
 	end := strings.LastIndex("]", response)
 
 	if start == -1 || end == -1 || end <= start {
-		// No JSON array found, return as single pair
-		return []Pair{
-			{
-				Prompt:     "",
-				Completion: response,
-			},
-		}
+		// No JSON array found, return empty slice (caller should handle)
+		return []Pair{}
 	}
 
 	jsonStr := response[start : end+1]
@@ -188,13 +188,8 @@ func (g *Generator) parseResponse(response string, expectedCount int) []Pair {
 			}
 		}
 
-		// Fallback: return the response as a single completion
-		return []Pair{
-			{
-				Prompt:     "",
-				Completion: response,
-			},
-		}
+		// Fallback: no valid pairs found
+		return []Pair{}
 	}
 
 	// If we got fewer pairs than expected, pad with empty pairs

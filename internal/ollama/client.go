@@ -34,14 +34,25 @@ func NewClient() (*Client, error) {
 // The context parameter controls cancellation - passing a cancelled context
 // will stop the generation as soon as possible.
 func (c *Client) Generate(ctx context.Context, model, prompt string) (string, error) {
-	formatJSON, _ := json.Marshal("json")
+	// Use JSON Schema for structured output matching Pair struct
+	schema := map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"prompt":     map[string]interface{}{"type": "string"},
+				"completion": map[string]interface{}{"type": "string"},
+			},
+			"required": []string{"prompt", "completion"},
+		},
+	}
+	formatJSON, _ := json.Marshal(schema)
 
 	req := &api.GenerateRequest{
 		Model:  model,
 		Prompt: prompt,
 		Stream: new(bool),
 		Format: formatJSON,
-		System: "You are a JSON-only output machine. Output ONLY valid JSON, no prose, no explanations, no markdown code blocks. The JSON must be parseable directly.",
 	}
 	*req.Stream = true
 
