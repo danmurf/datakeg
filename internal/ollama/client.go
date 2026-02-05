@@ -48,11 +48,14 @@ func (c *Client) Generate(ctx context.Context, model, prompt string) (string, er
 	}
 	formatBytes, _ := json.Marshal(schema)
 
+	thinkFalse := api.ThinkValue{Value: false}
+
 	req := &api.GenerateRequest{
 		Model:  model,
 		Prompt: prompt,
 		Stream: new(bool),
 		Format: formatBytes,
+		Think:  &thinkFalse,
 	}
 	*req.Stream = true
 
