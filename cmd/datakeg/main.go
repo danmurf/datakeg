@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"github.com/danmurf/datakeg/cmd/datakeg/commands"
 )
 
 var RootCmd = &cobra.Command{
@@ -62,10 +64,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  Splits: train=%.0f%%, valid=%.0f%%, test=%.0f%%\n", flagTrainPct*100, flagValidPct*100, flagTestPct*100)
 	fmt.Printf("  Pairs per 1K chars: %.1f\n", flagPairsPer1K)
 
-	_ = sourcePath
-	_ = outputPath
-
-	return nil
+	return commands.ExecuteGeneratePipeline(sourcePath, outputPath, flagModel, flagPairsPer1K, flagTimeout)
 }
 
 func main() {
