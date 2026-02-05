@@ -46,13 +46,13 @@ func (c *Client) Generate(ctx context.Context, model, prompt string) (string, er
 			"required": []string{"prompt", "completion"},
 		},
 	}
-	formatJSON, _ := json.Marshal(schema)
+	formatBytes, _ := json.Marshal(schema)
 
 	req := &api.GenerateRequest{
 		Model:  model,
 		Prompt: prompt,
 		Stream: new(bool),
-		Format: formatJSON,
+		Format: formatBytes,
 	}
 	*req.Stream = true
 
