@@ -4,6 +4,7 @@ package ollama
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -33,10 +34,13 @@ func NewClient() (*Client, error) {
 // The context parameter controls cancellation - passing a cancelled context
 // will stop the generation as soon as possible.
 func (c *Client) Generate(ctx context.Context, model, prompt string) (string, error) {
+	formatJSON, _ := json.Marshal("json")
+
 	req := &api.GenerateRequest{
 		Model:  model,
 		Prompt: prompt,
 		Stream: new(bool),
+		Format: formatJSON,
 	}
 	*req.Stream = true
 
