@@ -75,23 +75,44 @@ func ExecuteGeneratePipeline(
 
 		// Calculate and announce pair counts for each split
 		totalPairs := int(math.Ceil(float64(len(doc.Content)) / 1000 * pairsPer1K))
-		validCount := int(math.Ceil(float64(totalPairs) * 10.0 / 100))
-		testCount := int(math.Ceil(float64(totalPairs) * 10.0 / 100))
+
+		// Use the generator's config to calculate splits
+		genConfig := gen.GetConfig()
+		validCount := int(math.Ceil(float64(totalPairs) * genConfig.ValidPercent / 100))
+		testCount := int(math.Ceil(float64(totalPairs) * genConfig.TestPercent / 100))
 		trainCount := totalPairs - validCount - testCount
+
+		// Handle edge cases for small documents
+		if totalPairs == 1 {
+			trainCount = 1
+			validCount = 0
+			testCount = 0
+		} else if totalPairs == 2 {
+			trainCount = 1
+			validCount = 1
+			testCount = 0
+		}
+
 		fmt.Printf("     → Generating: %d train, %d valid, %d test pairs\n", trainCount, validCount, testCount)
 
-		// Generate for each split type
+		// Generate for each split type (only if count > 0)
 		splits := []struct {
 			name      string
 			splitType generator.SplitType
 			pairs     *[]writer.TrainingPair
+			count     int
 		}{
-			{"train", generator.SplitTrain, &trainPairs},
-			{"valid", generator.SplitValid, &validPairs},
-			{"test", generator.SplitTest, &testPairs},
+			{"train", generator.SplitTrain, &trainPairs, trainCount},
+			{"valid", generator.SplitValid, &validPairs, validCount},
+			{"test", generator.SplitTest, &testPairs, testCount},
 		}
 
 		for _, split := range splits {
+			if split.count <= 0 {
+				fmt.Printf("     → Skipping %s split (0 pairs required)\n", split.name)
+				continue
+			}
+
 			fmt.Printf("     → Calling LLM for %s split...\n", split.name)
 			pairs, err := gen.Generate(ctx, &doc, split.splitType)
 			if err != nil {

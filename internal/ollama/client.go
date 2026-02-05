@@ -4,7 +4,6 @@ package ollama
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -34,28 +33,10 @@ func NewClient() (*Client, error) {
 // The context parameter controls cancellation - passing a cancelled context
 // will stop the generation as soon as possible.
 func (c *Client) Generate(ctx context.Context, model, prompt string) (string, error) {
-	// Use JSON Schema for structured output matching Pair struct
-	schema := map[string]interface{}{
-		"type": "array",
-		"items": map[string]interface{}{
-			"type": "object",
-			"properties": map[string]interface{}{
-				"prompt":     map[string]interface{}{"type": "string"},
-				"completion": map[string]interface{}{"type": "string"},
-			},
-			"required": []string{"prompt", "completion"},
-		},
-	}
-	formatBytes, _ := json.Marshal(schema)
-
-	thinkFalse := api.ThinkValue{Value: false}
-
 	req := &api.GenerateRequest{
 		Model:  model,
 		Prompt: prompt,
 		Stream: new(bool),
-		Format: formatBytes,
-		Think:  &thinkFalse,
 	}
 	*req.Stream = true
 

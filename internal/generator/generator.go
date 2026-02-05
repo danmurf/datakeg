@@ -62,6 +62,11 @@ func NewGenerator(client *ollama.Client, config Config) *Generator {
 	}
 }
 
+// GetConfig returns the generator's configuration.
+func (g *Generator) GetConfig() Config {
+	return g.config
+}
+
 // Generate creates prompt/completion pairs from a document for a specific split type.
 func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split SplitType) ([]Pair, error) {
 	// Calculate pair count using float64 to avoid integer truncation
@@ -112,9 +117,15 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 }
 
 // calculatePairs calculates the total number of pairs based on document length.
+// Minimum 1 pair for any non-empty document.
 func (g *Generator) calculatePairs(content string) int {
 	charCount := float64(len(content))
 	pairs := math.Ceil(charCount / 1000 * g.config.PairsPer1KChars)
+
+	// Ensure minimum 1 pair for any non-empty document
+	if pairs < 1 && charCount > 0 {
+		return 1
+	}
 	return int(pairs)
 }
 
@@ -127,10 +138,39 @@ type SplitCounts struct {
 
 // calculateSplitCounts distributes pairs across splits using float64 math.
 func (g *Generator) calculateSplitCounts(total int) SplitCounts {
+	if total <= 0 {
+		return SplitCounts{Train: 0, Valid: 0, Test: 0}
+	}
+
+	// For small numbers of pairs, ensure we don't get negative counts
+	if total == 1 {
+		// With 1 pair, assign to train only
+		return SplitCounts{Train: 1, Valid: 0, Test: 0}
+	}
+	if total == 2 {
+		// With 2 pairs, give 1 to train, 1 to valid (test gets 0)
+		return SplitCounts{Train: 1, Valid: 1, Test: 0}
+	}
+
 	validCount := int(math.Ceil(float64(total) * g.config.ValidPercent / 100))
 	testCount := int(math.Ceil(float64(total) * g.config.TestPercent / 100))
 	// Train gets the remainder
 	trainCount := total - validCount - testCount
+
+	// Ensure minimum 1 pair for each split when possible
+	if trainCount < 1 && total >= 3 {
+		trainCount = 1
+		// Redistribute the extra pair
+		remaining := total - 1
+		validCount = int(math.Ceil(float64(remaining) * g.config.ValidPercent / 100))
+		testCount = remaining - validCount
+	}
+	if validCount < 1 && total >= 2 {
+		validCount = 1
+	}
+	if testCount < 1 && total >= 3 {
+		testCount = 1
+	}
 
 	return SplitCounts{
 		Train: trainCount,
@@ -163,8 +203,8 @@ func (g *Generator) parseResponse(response string, expectedCount int) []Pair {
 	// The LLM should return: [{"prompt": "...", "completion": "..."}, ...]
 
 	// Clean up the response - find JSON array boundaries
-	start := strings.Index("[", response)
-	end := strings.LastIndex("]", response)
+	start := strings.Index(response, "[")
+	end := strings.LastIndex(response, "]")
 
 	if start == -1 || end == -1 || end <= start {
 		// No JSON array found, return empty slice (caller should handle)
