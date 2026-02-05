@@ -1,0 +1,9 @@
+You are generating validation data for an LLM. Given the following documentation, generate exactly {{.PairCount}} question-answer pairs that test understanding.
+
+Document:
+{{.DocumentContent}}
+
+Generate {{.PairCount}} question-answer pairs that validate comprehension of this content. Output as JSON array:
+[{"prompt": "question here", "completion": "answer here"}, ...]
+
+Return ONLY the JSON array, no other text.
