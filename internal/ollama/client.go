@@ -41,6 +41,7 @@ func (c *Client) Generate(ctx context.Context, model, prompt string) (string, er
 		Prompt: prompt,
 		Stream: new(bool),
 		Format: formatJSON,
+		System: "You are a JSON-only output machine. Output ONLY valid JSON, no prose, no explanations, no markdown code blocks. The JSON must be parseable directly.",
 	}
 	*req.Stream = true
 
