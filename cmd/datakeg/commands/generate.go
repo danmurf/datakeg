@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"time"
@@ -69,23 +70,34 @@ func ExecuteGeneratePipeline(
 	var testPairs []writer.TrainingPair
 
 	for i, doc := range documents {
-		fmt.Printf("Processing document %d/%d: %s\n", i+1, len(documents), doc.Name)
+		docPath, _ := filepath.Rel(sourceDir, doc.Path)
+		fmt.Printf("[%d/%d] Processing: %s (%d chars)\n", i+1, len(documents), docPath, len(doc.Content))
+
+		// Calculate and announce pair counts for each split
+		totalPairs := int(math.Ceil(float64(len(doc.Content)) / 1000 * pairsPer1K))
+		validCount := int(math.Ceil(float64(totalPairs) * 10.0 / 100))
+		testCount := int(math.Ceil(float64(totalPairs) * 10.0 / 100))
+		trainCount := totalPairs - validCount - testCount
+		fmt.Printf("     → Generating: %d train, %d valid, %d test pairs\n", trainCount, validCount, testCount)
 
 		// Generate for each split type
 		splits := []struct {
+			name      string
 			splitType generator.SplitType
 			pairs     *[]writer.TrainingPair
 		}{
-			{generator.SplitTrain, &trainPairs},
-			{generator.SplitValid, &validPairs},
-			{generator.SplitTest, &testPairs},
+			{"train", generator.SplitTrain, &trainPairs},
+			{"valid", generator.SplitValid, &validPairs},
+			{"test", generator.SplitTest, &testPairs},
 		}
 
 		for _, split := range splits {
+			fmt.Printf("     → Calling LLM for %s split...\n", split.name)
 			pairs, err := gen.Generate(ctx, &doc, split.splitType)
 			if err != nil {
 				return fmt.Errorf("generate %s pairs for %s: %w", split.splitType, doc.Name, err)
 			}
+			fmt.Printf("     → %s split: %d pairs generated\n", split.name, len(pairs))
 
 			// Convert generator.Pair to writer.TrainingPair
 			for _, p := range pairs {
