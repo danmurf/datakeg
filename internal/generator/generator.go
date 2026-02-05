@@ -2,8 +2,10 @@ package generator
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
+	"strings"
 
 	"github.com/danmurf/datakeg/internal/ollama"
 	"github.com/danmurf/datakeg/internal/processor"
@@ -151,15 +153,66 @@ func (g *Generator) getTemplateName(split SplitType) string {
 	}
 }
 
-// parseResponse parses the LLM response into a slice of Pairs.
-// This is a placeholder implementation.
 func (g *Generator) parseResponse(response string, expectedCount int) []Pair {
-	// TODO: Implement proper parsing based on response format
-	// For now, return a single pair with the response as completion
-	return []Pair{
-		{
-			Prompt:     "", // Prompt was sent to LLM
-			Completion: response,
-		},
+	// Try to find and parse JSON array from response
+	// The LLM should return: [{"prompt": "...", "completion": "..."}, ...]
+
+	// Clean up the response - find JSON array boundaries
+	start := strings.Index("[", response)
+	end := strings.LastIndex("]", response)
+
+	if start == -1 || end == -1 || end <= start {
+		// No JSON array found, return as single pair
+		return []Pair{
+			{
+				Prompt:     "",
+				Completion: response,
+			},
+		}
 	}
+
+	jsonStr := response[start : end+1]
+
+	// Try to parse as array of Pair
+	var pairs []Pair
+	if err := json.Unmarshal([]byte(jsonStr), &pairs); err != nil {
+		// Try to unescape if it's double-encoded
+		var raw interface{}
+		if err2 := json.Unmarshal([]byte(jsonStr), &raw); err2 == nil {
+			// Check if it's a string containing JSON
+			if str, ok := raw.(string); ok {
+				// Try parsing the string as JSON
+				if innerPairs, err3 := parseJSONArrayString(str); err3 == nil {
+					return innerPairs
+				}
+			}
+		}
+
+		// Fallback: return the response as a single completion
+		return []Pair{
+			{
+				Prompt:     "",
+				Completion: response,
+			},
+		}
+	}
+
+	// If we got fewer pairs than expected, pad with empty pairs
+	for len(pairs) < expectedCount {
+		pairs = append(pairs, Pair{
+			Prompt:     "",
+			Completion: "",
+		})
+	}
+
+	return pairs[:expectedCount]
+}
+
+// parseJSONArrayString parses a string that contains a JSON array
+func parseJSONArrayString(s string) ([]Pair, error) {
+	var pairs []Pair
+	if err := json.Unmarshal([]byte(s), &pairs); err != nil {
+		return nil, err
+	}
+	return pairs, nil
 }
