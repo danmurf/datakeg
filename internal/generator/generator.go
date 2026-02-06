@@ -194,44 +194,38 @@ func (g *Generator) getTemplateName(split SplitType) string {
 }
 
 func (g *Generator) parseResponse(response string, expectedCount int) []Pair {
-	// Handle empty or whitespace-only responses
-	if len(strings.TrimSpace(response)) == 0 {
-		return []Pair{}
-	}
-
-	// Try to find and parse JSON array from response
-	// The LLM should return: [{"prompt": "...", "completion": "..."}, ...]
-
-	// Clean up the response - find JSON array boundaries
-	start := strings.Index(response, "[")
-	end := strings.LastIndex(response, "]")
-
-	if start == -1 || end == -1 || end <= start {
-		// No JSON array found, return empty slice (caller should handle)
-		return []Pair{}
-	}
-
-	jsonStr := response[start : end+1]
-
-	// Try to parse as array of Pair
 	var pairs []Pair
-	if err := json.Unmarshal([]byte(jsonStr), &pairs); err != nil {
-		// Try to unescape if it's double-encoded
-		var raw interface{}
-		if err2 := json.Unmarshal([]byte(jsonStr), &raw); err2 == nil {
-			// Check if it's a string containing JSON
-			if str, ok := raw.(string); ok {
-				// Try parsing the string as JSON
-				if innerPairs, err3 := parseJSONArrayString(str); err3 == nil {
-					return innerPairs
+
+	// Try to parse response only if it's not empty
+	if len(strings.TrimSpace(response)) > 0 {
+		// Try to find and parse JSON array from response
+		// The LLM should return: [{"prompt": "...", "completion": "..."}, ...]
+
+		// Clean up the response - find JSON array boundaries
+		start := strings.Index(response, "[")
+		end := strings.LastIndex(response, "]")
+
+		if start != -1 && end != -1 && end > start {
+			jsonStr := response[start : end+1]
+
+			// Try to parse as array of Pair
+			if err := json.Unmarshal([]byte(jsonStr), &pairs); err != nil {
+				// Try to unescape if it's double-encoded
+				var raw interface{}
+				if err2 := json.Unmarshal([]byte(jsonStr), &raw); err2 == nil {
+					// Check if it's a string containing JSON
+					if str, ok := raw.(string); ok {
+						// Try parsing the string as JSON
+						if innerPairs, err3 := parseJSONArrayString(str); err3 == nil {
+							pairs = innerPairs
+						}
+					}
 				}
 			}
 		}
-
-		// Fallback: no valid pairs found
-		return []Pair{}
 	}
 
+	// Always ensure we return exactly expectedCount pairs
 	// If we got fewer pairs than expected, pad with empty pairs
 	for len(pairs) < expectedCount {
 		pairs = append(pairs, Pair{

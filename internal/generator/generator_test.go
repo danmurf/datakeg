@@ -300,25 +300,33 @@ func TestGenerator_parseResponse(t *testing.T) {
 			name:          "empty response",
 			response:      "",
 			expectedCount: 1,
-			want:          []Pair{},
+			want: []Pair{
+				{Prompt: "", Completion: ""},
+			},
 		},
 		{
 			name:          "whitespace only",
 			response:      "   \n\t  ",
 			expectedCount: 1,
-			want:          []Pair{},
+			want: []Pair{
+				{Prompt: "", Completion: ""},
+			},
 		},
 		{
 			name:          "no JSON array",
 			response:      "Just some text without JSON",
 			expectedCount: 1,
-			want:          []Pair{},
+			want: []Pair{
+				{Prompt: "", Completion: ""},
+			},
 		},
 		{
 			name:          "malformed JSON",
 			response:      `[{"prompt": "Q", "completion": }]`,
 			expectedCount: 1,
-			want:          []Pair{},
+			want: []Pair{
+				{Prompt: "", Completion: ""},
+			},
 		},
 		{
 			name:          "fewer pairs than expected pads with empty",

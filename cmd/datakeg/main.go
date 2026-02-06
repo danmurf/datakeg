@@ -9,6 +9,14 @@ import (
 	"github.com/danmurf/datakeg/cmd/datakeg/commands"
 )
 
+// Build information set via ldflags
+var (
+	version   = "dev"
+	commit    = "unknown"
+	date      = "unknown"
+	goVersion = "unknown"
+)
+
 var RootCmd = &cobra.Command{
 	Use:   "datakeg",
 	Short: "Generate training datasets from documentation",
@@ -17,6 +25,7 @@ var RootCmd = &cobra.Command{
 Process markdown and text files from a source directory,
 generate question-answer pairs using Ollama, and output
 train/valid/test JSONL files.`,
+	Version: version,
 }
 
 // Configuration flags for the generate command.
@@ -39,6 +48,17 @@ train/valid/test JSONL files to output directory.`,
 	RunE: runGenerate,
 }
 
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print version information",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("datakeg %s\n", version)
+		fmt.Printf("  commit:     %s\n", commit)
+		fmt.Printf("  built:      %s\n", date)
+		fmt.Printf("  go version: %s\n", goVersion)
+	},
+}
+
 func init() {
 	// Persistent flags available to all subcommands
 	RootCmd.PersistentFlags().StringVarP(&flagModel, "model", "m", "gpt-oss:20b", "Ollama model to use")
@@ -51,6 +71,7 @@ func init() {
 	generateCmd.Flags().IntVarP(&flagTimeout, "timeout", "t", 30, "Operation timeout in minutes")
 
 	RootCmd.AddCommand(generateCmd)
+	RootCmd.AddCommand(versionCmd)
 }
 
 func runGenerate(cmd *cobra.Command, args []string) error {
