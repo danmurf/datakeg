@@ -73,10 +73,12 @@ Plans:
   5. User encounters errors and receives helpful messages with actionable guidance
   6. User can override any default configuration via CLI flags
 
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD during planning
+- [ ] 03-01-PLAN.md — Per-document output files + --skip-merge flag
+- [ ] 03-02-PLAN.md — Merge subcommand implementation
+- [ ] 03-03-PLAN.md — UX improvements and error handling
 
 ## Progress
 
@@ -85,10 +87,10 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Pipeline | 0/TBD | Not started | - |
+| 1. Core Pipeline | 3/3 | ✓ Complete | 2026-02-05 |
 | 2. Smart Generation | 3/3 | ✓ Complete | 2026-02-06 |
-| 3. Production Ready | 0/TBD | Not started | - |
+| 3. Production Ready | 0/3 | ◆ In Progress | - |
 
 ---
-*Roadmap created: 2026-02-05*
-*Last updated: 2026-02-06 (Phase 2 complete)*
+*Roadmap created: 2025-02-05*
+*Last updated: 2026-02-06 (Phase 3 planned)*
