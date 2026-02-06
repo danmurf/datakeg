@@ -6,6 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 datakeg transforms raw documentation into LLM training datasets. It processes markdown/text files, generates question-answer pairs using Ollama models, and outputs train/valid/test JSONL files.
 
+## Dependency Management
+
+Dependabot is configured to check for updates daily at 06:00 UTC:
+- Go module updates are grouped into one PR (separate PRs for major vs minor/patch)
+- GitHub Actions updates are grouped into one PR
+- All updates are labeled with `dependencies` and their ecosystem type
+
 ## Build and Test Commands
 
 ```bash
