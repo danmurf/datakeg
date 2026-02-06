@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2025-02-05)
 ## Current Position
 
 Phase: 2 of 3 (Smart Generation)
-Plan: 1 of 3 in current phase
-Status: validatePair and deduplicatePairs implemented with full test coverage
-Last activity: 2026-02-06 — Completed 02-01-PLAN.md with TDD validation and deduplication functions
+Plan: 2 of 3 in current phase
+Status: ExcludePairs support added to templates and Generate() refactored with validation, deduplication, exclusion filtering, and backfill
+Last activity: 2026-02-06 — Completed 02-02-PLAN.md with exclusion support and Generate() refactoring
 
-Progress: [██░░░░░░░░░] 33%
+Progress: [████░░░░░░░░░] 66%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: ~2 min
-- Total execution time: 0.13 hours
+- Total plans completed: 5
+- Average duration: ~3 min
+- Total execution time: 0.20 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 3/4 | 4 | ~2 min |
-| 2 | 1/3 | 3 | ~2 min |
+| 2 | 2/3 | 3 | ~4 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01, 01-02, 01-03, 02-01 (all ~2 min)
-- Trend: Consistent ~2 min per plan
+- Last 5 plans: 01-01, 01-02, 01-03, 02-01, 02-02 (averaging ~3 min)
+- Trend: Smart generation phase taking longer due to more complex refactoring
 
 *Updated after each plan completion*
 
@@ -48,6 +48,10 @@ Recent decisions affecting current work:
 - Modified pipeline to skip splits with 0 pairs required
 - Used strings.TrimSpace for whitespace validation in validatePair
 - Case-sensitive deduplication matching with "prompt|||completion" key format
+- Added ExcludePair struct to templates package to avoid circular import with generator.Pair
+- parseResponse() no longer pads with empty pairs - returns whatever was parsed
+- deduplicateAgainstExclusions only filters against exclusions (not internal deduplication)
+- Backfill loop accumulates all collected pairs as new exclusions for each retry iteration
 
 ### Pending Todos
 
@@ -55,14 +59,14 @@ None yet.
 
 ### Blockers/Concerns
 
-None yet.
+- cmd/datakeg Generate() signature mismatch - will be fixed in Plan 02-03
 
 ## Session Continuity
 
-Last session: 2026-02-06 (plan 02-01 execution)
-Stopped at: Completed 02-01-PLAN.md with validatePair and deduplicatePairs
+Last session: 2026-02-06 (plan 02-02 execution)
+Stopped at: Completed 02-02-PLAN.md with exclusion support and Generate() refactoring
 Resume file: None
 
 ---
-*State initialized: 2026-02-05*
+*State initialized: 2025-02-05*
 *Last updated: 2026-02-06*
