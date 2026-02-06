@@ -60,6 +60,15 @@ var versionCmd = &cobra.Command{
 	},
 }
 
+var mergeCmd = &cobra.Command{
+	Use:   "merge <output>",
+	Short: "Merge per-document JSONL files into master train/valid/test files",
+	Long: `Merge per-document files (generated with --skip-merge) into master train.jsonl,
+valid.jsonl, and test.jsonl files.`,
+	Args: cobra.ExactArgs(1),
+	RunE: runMerge,
+}
+
 func init() {
 	// Persistent flags available to all subcommands
 	RootCmd.PersistentFlags().StringVarP(&flagModel, "model", "m", "gpt-oss:20b", "Ollama model to use")
@@ -74,6 +83,7 @@ func init() {
 
 	RootCmd.AddCommand(generateCmd)
 	RootCmd.AddCommand(versionCmd)
+	RootCmd.AddCommand(mergeCmd)
 }
 
 func runGenerate(cmd *cobra.Command, args []string) error {
@@ -88,6 +98,15 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  Pairs per 1K chars: %.1f\n", flagPairsPer1K)
 
 	return commands.ExecuteGeneratePipeline(sourcePath, outputPath, flagModel, flagPairsPer1K, flagValidPct, flagTestPct, flagTimeout, flagSkipMerge)
+}
+
+func runMerge(cmd *cobra.Command, args []string) error {
+	outputPath := args[0]
+
+	fmt.Printf("Merge command invoked with:\n")
+	fmt.Printf("  Output:  %s\n", outputPath)
+
+	return commands.ExecuteMergePipeline(outputPath)
 }
 
 func main() {
