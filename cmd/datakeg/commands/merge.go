@@ -16,7 +16,7 @@ import (
 func ExecuteMergePipeline(outputDir string) error {
 	// Verify output directory exists
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
-		return fmt.Errorf("directory '%s' does not exist\nRun 'datakeg generate --skip-merge <source> <output>' first to create per-document files.", outputDir)
+		return fmt.Errorf("directory '%s' does not exist. Run 'datakeg generate --skip-merge <source> <output>' first to create per-document files", outputDir)
 	}
 
 	fmt.Printf("Merging per-document files in %s...\n", outputDir)
@@ -43,7 +43,7 @@ func ExecuteMergePipeline(outputDir string) error {
 	}
 
 	if totalFilesFound == 0 {
-		return fmt.Errorf("no per-document files (*_train.jsonl, *_valid.jsonl, *_test.jsonl) found in %s\nRun 'datakeg generate --skip-merge' first to create them.", outputDir)
+		return fmt.Errorf("no per-document files (*_train.jsonl, *_valid.jsonl, *_test.jsonl) found in %s. Run 'datakeg generate --skip-merge' first to create them", outputDir)
 	}
 
 	fmt.Printf("  Found %d train, %d valid, %d test files\n",
@@ -60,7 +60,7 @@ func ExecuteMergePipeline(outputDir string) error {
 			// Write master file for this split
 			masterFile := filepath.Join(outputDir, split+".jsonl")
 			if err := writer.WriteJSONL(masterFile, pairs); err != nil {
-				return fmt.Errorf("could not write %s.jsonl\nCheck disk space and write permissions.", split)
+				return fmt.Errorf("could not write %s.jsonl. Check disk space and write permissions", split)
 			}
 			fmt.Printf("  Merged %d pairs from %d files into %s.jsonl\n", len(pairs), filesProcessed, split)
 		} else {
@@ -129,7 +129,7 @@ func mergeSplitFiles(outputDir string, split string) ([]writer.TrainingPair, int
 func readJSONLFile(filePath string) ([]writer.TrainingPair, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("could not read %s\nThe file may be corrupted or permissions are incorrect.", filepath.Base(filePath))
+		return nil, fmt.Errorf("could not read %s. The file may be corrupted or permissions are incorrect", filepath.Base(filePath))
 	}
 
 	// Parse each line as JSON

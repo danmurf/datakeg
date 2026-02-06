@@ -382,7 +382,7 @@ func TestDefaultConfig(t *testing.T) {
 		got  interface{}
 		want interface{}
 	}{
-		{"PairsPer1KChars", config.PairsPer1KChars, 2.0},
+		{"PairsPer1KChars", config.PairsPer1KChars, 10.0},
 		{"ValidPercent", config.ValidPercent, 10.0},
 		{"TestPercent", config.TestPercent, 10.0},
 		{"Model", config.Model, "gpt-oss:20b"},

@@ -40,19 +40,19 @@ func ExecuteGeneratePipeline(
 	fmt.Printf("Loading documents from %s...\n", sourceDir)
 	documents, err := processor.LoadDocuments(sourceDir)
 	if err != nil {
-		return fmt.Errorf("could not read source directory: %s\nCheck that the path exists and you have read permissions.", sourceDir)
+		return fmt.Errorf("could not read source directory: %s. Check that the path exists and you have read permissions", sourceDir)
 	}
 	fmt.Printf("Loaded %d documents\n", len(documents))
 
 	if len(documents) == 0 {
-		return fmt.Errorf("no markdown (.md) or text (.txt) files found in %s\nAdd some documentation files to the source directory and try again.", sourceDir)
+		return fmt.Errorf("no markdown (.md) or text (.txt) files found in %s. Add some documentation files to the source directory and try again", sourceDir)
 	}
 
 	// Step 2: Create Ollama client
 	fmt.Printf("Connecting to Ollama...\n")
 	ollamaClient, err := ollama.NewClient()
 	if err != nil {
-		return fmt.Errorf("could not connect to Ollama\nMake sure Ollama is running (ollama serve) and the model is available (ollama pull %s).", model)
+		return fmt.Errorf("could not connect to Ollama. Make sure Ollama is running (ollama serve) and the model is available (ollama pull %s)", model)
 	}
 
 	// Step 3: Create generator with config
@@ -67,7 +67,7 @@ func ExecuteGeneratePipeline(
 
 	// Step 4: Create output directory
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return fmt.Errorf("could not create output directory %s\nCheck that you have write permissions and the path is valid.", outputDir)
+		return fmt.Errorf("could not create output directory %s. Check that you have write permissions and the path is valid", outputDir)
 	}
 
 	// Step 5: Process documents and collect pairs sequentially with cross-split exclusion
@@ -111,7 +111,7 @@ func ExecuteGeneratePipeline(
 			fmt.Printf("     → Generating train pairs...\n")
 			pairs, err := gen.Generate(ctx, &doc, generator.SplitTrain, nil)
 			if err != nil {
-				return fmt.Errorf("failed to generate training pairs for %s\nThis may be a temporary Ollama issue. Try again, or try a different model.", doc.Name)
+				return fmt.Errorf("failed to generate training pairs for %s. This may be a temporary Ollama issue. Try again, or try a different model", doc.Name)
 			}
 			docTrainPairs = pairs
 			fmt.Printf("     → Train: %d pairs generated\n", len(pairs))
@@ -128,7 +128,7 @@ func ExecuteGeneratePipeline(
 			if len(pairs) > 0 {
 				perDocFile := sanitizeDocName(doc, outputDir, "train")
 				if err := writer.WriteJSONL(perDocFile, convertPairs(pairs)); err != nil {
-					return fmt.Errorf("failed to write %s\nCheck disk space and write permissions.", filepath.Base(perDocFile))
+					return fmt.Errorf("failed to write %s. Check disk space and write permissions", filepath.Base(perDocFile))
 				}
 				fmt.Printf("     → Written %d pairs to %s\n", len(pairs), filepath.Base(perDocFile))
 			}
@@ -139,7 +139,7 @@ func ExecuteGeneratePipeline(
 			fmt.Printf("     → Generating valid pairs (excluding %d train pairs)...\n", len(docTrainPairs))
 			pairs, err := gen.Generate(ctx, &doc, generator.SplitValid, docTrainPairs)
 			if err != nil {
-				return fmt.Errorf("failed to generate validation pairs for %s\nThis may be a temporary Ollama issue. Try again, or try a different model.", doc.Name)
+				return fmt.Errorf("failed to generate validation pairs for %s. This may be a temporary Ollama issue. Try again, or try a different model", doc.Name)
 			}
 			docValidPairs = pairs
 			fmt.Printf("     → Valid: %d pairs generated\n", len(pairs))
@@ -156,7 +156,7 @@ func ExecuteGeneratePipeline(
 			if len(pairs) > 0 {
 				perDocFile := sanitizeDocName(doc, outputDir, "valid")
 				if err := writer.WriteJSONL(perDocFile, convertPairs(pairs)); err != nil {
-					return fmt.Errorf("failed to write %s\nCheck disk space and write permissions.", filepath.Base(perDocFile))
+					return fmt.Errorf("failed to write %s. Check disk space and write permissions", filepath.Base(perDocFile))
 				}
 				fmt.Printf("     → Written %d pairs to %s\n", len(pairs), filepath.Base(perDocFile))
 			}
@@ -169,7 +169,7 @@ func ExecuteGeneratePipeline(
 			fmt.Printf("     → Generating test pairs (excluding %d train+valid pairs)...\n", len(allExclude))
 			pairs, err := gen.Generate(ctx, &doc, generator.SplitTest, allExclude)
 			if err != nil {
-				return fmt.Errorf("failed to generate test pairs for %s\nThis may be a temporary Ollama issue. Try again, or try a different model.", doc.Name)
+				return fmt.Errorf("failed to generate test pairs for %s. This may be a temporary Ollama issue. Try again, or try a different model", doc.Name)
 			}
 			fmt.Printf("     → Test: %d pairs generated\n", len(pairs))
 
@@ -185,7 +185,7 @@ func ExecuteGeneratePipeline(
 			if len(pairs) > 0 {
 				perDocFile := sanitizeDocName(doc, outputDir, "test")
 				if err := writer.WriteJSONL(perDocFile, convertPairs(pairs)); err != nil {
-					return fmt.Errorf("failed to write %s\nCheck disk space and write permissions.", filepath.Base(perDocFile))
+					return fmt.Errorf("failed to write %s. Check disk space and write permissions", filepath.Base(perDocFile))
 				}
 				fmt.Printf("     → Written %d pairs to %s\n", len(pairs), filepath.Base(perDocFile))
 			}
@@ -205,7 +205,7 @@ func ExecuteGeneratePipeline(
 	if len(trainPairs) > 0 {
 		outFile := filepath.Join(outputDir, "train.jsonl")
 		if err := writer.WriteJSONL(outFile, trainPairs); err != nil {
-			return fmt.Errorf("failed to write train.jsonl\nCheck disk space and write permissions.")
+			return fmt.Errorf("failed to write train.jsonl. Check disk space and write permissions")
 		}
 		fmt.Printf("  Written %d pairs to train.jsonl\n", len(trainPairs))
 	}
@@ -213,7 +213,7 @@ func ExecuteGeneratePipeline(
 	if len(validPairs) > 0 {
 		outFile := filepath.Join(outputDir, "valid.jsonl")
 		if err := writer.WriteJSONL(outFile, validPairs); err != nil {
-			return fmt.Errorf("failed to write valid.jsonl\nCheck disk space and write permissions.")
+			return fmt.Errorf("failed to write valid.jsonl. Check disk space and write permissions")
 		}
 		fmt.Printf("  Written %d pairs to valid.jsonl\n", len(validPairs))
 	}
@@ -221,7 +221,7 @@ func ExecuteGeneratePipeline(
 	if len(testPairs) > 0 {
 		outFile := filepath.Join(outputDir, "test.jsonl")
 		if err := writer.WriteJSONL(outFile, testPairs); err != nil {
-			return fmt.Errorf("failed to write test.jsonl\nCheck disk space and write permissions.")
+			return fmt.Errorf("failed to write test.jsonl. Check disk space and write permissions")
 		}
 		fmt.Printf("  Written %d pairs to test.jsonl\n", len(testPairs))
 	}
