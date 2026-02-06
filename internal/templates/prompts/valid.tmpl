@@ -4,6 +4,14 @@ Generate {{.PairCount}} question-answer pairs that validate comprehension of thi
 [{"prompt": "question here", "completion": "answer here"}, ...]
 
 Return ONLY the JSON array, no other text.
+{{if .ExcludePairs}}
+
+IMPORTANT: Do NOT generate pairs similar to these previously generated pairs. Create DIFFERENT questions and answers:
+{{range .ExcludePairs}}
+- Prompt: "{{.Prompt}}"
+  Completion: "{{.Completion}}"
+{{end}}
+{{end}}
 
 Document:
 {{.DocumentContent}}

@@ -12,11 +12,19 @@ import (
 //go:embed prompts/*.tmpl
 var promptFS embed.FS
 
+// ExcludePair represents a previously generated pair to exclude from new generation.
+// This avoids duplicate pairs across dataset splits.
+type ExcludePair struct {
+	Prompt     string
+	Completion string
+}
+
 // PromptData contains the data passed to template execution.
 type PromptData struct {
 	DocumentContent string
 	PairCount       int
 	DocumentName    string // Reserved for future use
+	ExcludePairs    []ExcludePair
 }
 
 // ExecuteTemplate loads and executes the specified template with the given data.

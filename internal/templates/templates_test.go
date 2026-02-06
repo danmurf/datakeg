@@ -92,3 +92,78 @@ func TestExecuteTemplate_invalidName(t *testing.T) {
 		t.Error("ExecuteTemplate() should fail for invalid template")
 	}
 }
+
+// TestExecuteTemplate_excludePairs tests that ExcludePairs are conditionally rendered.
+func TestExecuteTemplate_excludePairs(t *testing.T) {
+	data := PromptData{
+		DocumentContent: "Test document content.",
+		PairCount:       2,
+		ExcludePairs: []ExcludePair{
+			{Prompt: "Q1", Completion: "A1"},
+			{Prompt: "Q2", Completion: "A2"},
+		},
+	}
+
+	result, err := ExecuteTemplate("train.tmpl", data)
+	if err != nil {
+		t.Fatalf("ExecuteTemplate() error = %v", err)
+	}
+
+	// Verify exclusion section is rendered
+	if !strings.Contains(result, "Do NOT generate pairs similar to these previously generated pairs") {
+		t.Error("ExecuteTemplate() missing exclusion instruction")
+	}
+	if !strings.Contains(result, "Q1") {
+		t.Error("ExecuteTemplate() missing first exclude pair prompt")
+	}
+	if !strings.Contains(result, "A1") {
+		t.Error("ExecuteTemplate() missing first exclude pair completion")
+	}
+	if !strings.Contains(result, "Q2") {
+		t.Error("ExecuteTemplate() missing second exclude pair prompt")
+	}
+	if !strings.Contains(result, "A2") {
+		t.Error("ExecuteTemplate() missing second exclude pair completion")
+	}
+}
+
+// TestExecuteTemplate_noExcludePairs tests that no exclusion section renders when ExcludePairs is nil.
+func TestExecuteTemplate_noExcludePairs(t *testing.T) {
+	data := PromptData{
+		DocumentContent: "Test document content.",
+		PairCount:       2,
+		ExcludePairs:    nil,
+	}
+
+	result, err := ExecuteTemplate("valid.tmpl", data)
+	if err != nil {
+		t.Fatalf("ExecuteTemplate() error = %v", err)
+	}
+
+	// Verify exclusion section is NOT rendered
+	if strings.Contains(result, "Do NOT generate pairs similar to these previously generated pairs") {
+		t.Error("ExecuteTemplate() should not render exclusion section when ExcludePairs is nil")
+	}
+	if strings.Contains(result, "Prompt:") {
+		t.Error("ExecuteTemplate() should not render exclude pair prompts when ExcludePairs is nil")
+	}
+}
+
+// TestExecuteTemplate_emptyExcludePairs tests that no exclusion section renders when ExcludePairs is empty.
+func TestExecuteTemplate_emptyExcludePairs(t *testing.T) {
+	data := PromptData{
+		DocumentContent: "Test document content.",
+		PairCount:       2,
+		ExcludePairs:    []ExcludePair{},
+	}
+
+	result, err := ExecuteTemplate("test.tmpl", data)
+	if err != nil {
+		t.Fatalf("ExecuteTemplate() error = %v", err)
+	}
+
+	// Verify exclusion section is NOT rendered
+	if strings.Contains(result, "Do NOT generate pairs similar to these previously generated pairs") {
+		t.Error("ExecuteTemplate() should not render exclusion section when ExcludePairs is empty")
+	}
+}
