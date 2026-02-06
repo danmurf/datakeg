@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2025-02-05)
 ## Current Position
 
 Phase: 3 of 3 (Production-Ready)
-Plan: 1 of 1 in current phase
-Status: Per-document file output and --skip-merge flag added
-Last activity: 2026-02-06 — Completed 03-01-PLAN.md with per-document output and --skip-merge flag
+Plan: 2 of 2 in current phase
+Status: Phase 3 complete - merge subcommand implemented
+Last activity: 2026-02-06 — Completed 03-02-PLAN.md with merge subcommand implementation
 
-Progress: [████░░░░░░░░░░] 33% (Phase 3 just started)
+Progress: [██████████] 100% (All phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: ~3 min
-- Total execution time: ~0.3 hours
+- Total plans completed: 8
+- Average duration: ~3-5 min
+- Total execution time: ~0.4 hours
 
 **By Phase:**
 
@@ -29,12 +29,13 @@ Progress: [████░░░░░░░░░░] 33% (Phase 3 just started
 |-------|-------|-------|----------|
 | 01-foundation | 3 | 4 | ~2 min |
 | 02-smart-generation | 3 | 3 | ~4 min |
-| 03-production-ready | 1 | 1 | ~3 min |
+| 03-production-ready | 2 | 2 | ~5 min |
 
-**Recent Trend:**
-- Last 7 plans averaging ~3 min
-- Phase 2 took longer due to complex pipeline wiring
-- Phase 3 starting with CLI flag and per-document output
+**Final Status:**
+- All 3 phases complete
+- Core functionality: document processing, Ollama integration, training data generation
+- Production features: per-document output, --skip-merge flag, merge subcommand
+- User workflow: generate --skip-merge → inspect per-document files → merge into master files
 
 *Updated after each plan completion*
 
@@ -56,21 +57,22 @@ Recent decisions affecting current work:
 - Backfill loop accumulates all collected pairs as new exclusions for each retry iteration
 - Per-document files written during processing (not after) for true skip-merge functionality
 - Per-document filenames follow {docname}_{split}.jsonl pattern with sanitized names
+- Merge command combines per-document files using *_{split}.jsonl pattern matching
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
-None - Phase 3 in progress
+None - All phases complete
 
 ## Session Continuity
 
-Last session: 2026-02-06 (plan 03-01 execution)
-Stopped at: Completed 03-01-PLAN.md with per-document output and --skip-merge flag
+Last session: 2026-02-06 (plan 03-02 execution)
+Stopped at: Completed 03-02-PLAN.md with merge subcommand
 Resume file: None
 
 ---
 *State initialized: 2025-02-05*
-*Last updated: 2026-02-06 (Phase 3 started)*
+*Last updated: 2026-02-06 (Phase 3 complete)*
