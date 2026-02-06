@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ master, main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Lint
@@ -24,6 +28,7 @@ jobs:
         uses: golangci/golangci-lint-action@v4
         with:
           version: latest
+          install-mode: goinstall
 
   test:
     name: Test
