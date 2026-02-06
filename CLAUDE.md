@@ -12,8 +12,11 @@ datakeg transforms raw documentation into LLM training datasets. It processes ma
 # Build the binary (builds to ./datakeg)
 make build
 
-# Run all tests
+# Run all tests (uses Go's built-in test cache for speed)
 make test
+
+# Run all tests without cache (useful after external changes)
+make test-nocache
 
 # Run tests with coverage report (generates coverage.html)
 make coverage
@@ -27,12 +30,21 @@ go test -v -run TestName ./path/to/package
 # Run a single test in a specific package
 go test -v -run TestLoadDocuments ./internal/processor
 
-# Clean build artifacts
+# Clean build artifacts and test cache
 make clean
 
 # Install to $GOPATH/bin
 make install
 ```
+
+### Test Caching
+
+Go automatically caches test results for faster subsequent runs. Tests are re-run when:
+- Source files change
+- Test files change
+- Dependencies change
+
+To force tests to run without cache, use `make test-nocache` or `go test -count=1 ./...`.
 
 ## Architecture
 

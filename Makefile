@@ -40,7 +40,7 @@ LDFLAGS := -X 'main.version=$(VERSION)' \
 # Find all Go source files
 GO_FILES := $(shell find . -name '*.go' -type f)
 
-.PHONY: all clean test coverage install help deps tidy lint
+.PHONY: all clean test coverage install help deps tidy lint test-nocache
 
 # Default target
 all: $(BINARY_NAME)
@@ -64,10 +64,15 @@ clean:
 	rm -f $(BUILD_DIR)/$(BINARY_NAME)
 	@echo "Clean complete"
 
-## test: Run all tests
+## test: Run all tests (uses Go's built-in test cache)
 test:
 	@echo "Running tests..."
 	$(GOTEST) -v ./...
+
+## test-nocache: Run all tests without cache
+test-nocache:
+	@echo "Running tests without cache..."
+	$(GOTEST) -v -count=1 ./...
 
 ## coverage: Run tests with coverage
 coverage:
