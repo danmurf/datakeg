@@ -5,34 +5,36 @@
 See: .planning/PROJECT.md (updated 2025-02-05)
 
 **Core value:** Transform documentation into high-quality, deduplicated training data with minimal manual effort.
-**Current focus:** Phase 2: Smart Generation
+**Current focus:** Phase 3: Production-Ready
 
 ## Current Position
 
-Phase: 2 of 3 (Smart Generation)
-Plan: 3 of 3 in current phase
-Status: Pipeline wired with cross-split exclusion and CLI split percentage flags passed through to generator config
-Last activity: 2026-02-06 — Completed 02-03-PLAN.md with pipeline wiring complete
+Phase: 3 of 3 (Production-Ready)
+Plan: 1 of 1 in current phase
+Status: Per-document file output and --skip-merge flag added
+Last activity: 2026-02-06 — Completed 03-01-PLAN.md with per-document output and --skip-merge flag
 
-Progress: [██████████] 100%
+Progress: [████░░░░░░░░░░] 33% (Phase 3 just started)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 7
 - Average duration: ~3 min
-- Total execution time: 0.25 hours
+- Total execution time: ~0.3 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| | 1 | 3/4 | 4 | ~2 min |
-| | 2 | 3/3 | 3 | ~4 min |
+| 01-foundation | 3 | 4 | ~2 min |
+| 02-smart-generation | 3 | 3 | ~4 min |
+| 03-production-ready | 1 | 1 | ~3 min |
 
 **Recent Trend:**
-- Last 6 plans: 01-01, 01-02, 01-03, 02-01, 02-02, 02-03 (averaging ~3 min)
-- Trend: Smart generation phase taking longer due to more complex refactoring
+- Last 7 plans averaging ~3 min
+- Phase 2 took longer due to complex pipeline wiring
+- Phase 3 starting with CLI flag and per-document output
 
 *Updated after each plan completion*
 
@@ -52,6 +54,8 @@ Recent decisions affecting current work:
 - parseResponse() no longer pads with empty pairs - returns whatever was parsed
 - deduplicateAgainstExclusions only filters against exclusions (not internal deduplication)
 - Backfill loop accumulates all collected pairs as new exclusions for each retry iteration
+- Per-document files written during processing (not after) for true skip-merge functionality
+- Per-document filenames follow {docname}_{split}.jsonl pattern with sanitized names
 
 ### Pending Todos
 
@@ -59,14 +63,14 @@ None yet.
 
 ### Blockers/Concerns
 
-None - Phase 2 complete
+None - Phase 3 in progress
 
 ## Session Continuity
 
-Last session: 2026-02-06 (plan 02-03 execution)
-Stopped at: Completed 02-03-PLAN.md with pipeline wiring complete
+Last session: 2026-02-06 (plan 03-01 execution)
+Stopped at: Completed 03-01-PLAN.md with per-document output and --skip-merge flag
 Resume file: None
 
 ---
 *State initialized: 2025-02-05*
-*Last updated: 2026-02-06 (Phase 2 complete)*
+*Last updated: 2026-02-06 (Phase 3 started)*
