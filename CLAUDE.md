@@ -18,6 +18,9 @@ make test
 # Run tests with coverage report (generates coverage.html)
 make coverage
 
+# Run linting (automatically installs golangci-lint if needed)
+make lint
+
 # Run a single test
 go test -v -run TestName ./path/to/package
 

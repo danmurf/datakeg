@@ -13,8 +13,14 @@ func TestWriteJSONL(t *testing.T) {
 		t.Fatalf("create temp file: %v", err)
 	}
 	tmpFilename := tmpFile.Name()
-	tmpFile.Close()
-	defer os.Remove(tmpFilename)
+	if err := tmpFile.Close(); err != nil {
+		t.Fatalf("close temp file: %v", err)
+	}
+	defer func() {
+		if err := os.Remove(tmpFilename); err != nil {
+			t.Logf("failed to remove temp file: %v", err)
+		}
+	}()
 
 	// Write test pairs
 	pairs := []TrainingPair{
@@ -57,8 +63,14 @@ func TestWriteJSONLAppend(t *testing.T) {
 		t.Fatalf("create temp file: %v", err)
 	}
 	tmpFilename := tmpFile.Name()
-	tmpFile.Close()
-	defer os.Remove(tmpFilename)
+	if err := tmpFile.Close(); err != nil {
+		t.Fatalf("close temp file: %v", err)
+	}
+	defer func() {
+		if err := os.Remove(tmpFilename); err != nil {
+			t.Logf("failed to remove temp file: %v", err)
+		}
+	}()
 
 	// Write first batch
 	pairs1 := []TrainingPair{

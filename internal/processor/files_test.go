@@ -123,9 +123,9 @@ func TestLoadDocuments(t *testing.T) {
 					t.Fatal(err)
 				}
 				files := map[string]string{
-					filepath.Join(tmpDir, "root.md"):     "Root",
-					filepath.Join(subDir, "sub.txt"):     "Subdir",
-					filepath.Join(deepDir, "deep.md"):    "Deep",
+					filepath.Join(tmpDir, "root.md"):  "Root",
+					filepath.Join(subDir, "sub.txt"):  "Subdir",
+					filepath.Join(deepDir, "deep.md"): "Deep",
 				}
 				for path, content := range files {
 					if err := os.WriteFile(path, []byte(content), 0644); err != nil {
@@ -212,7 +212,7 @@ func TestLoadDocuments(t *testing.T) {
 			setupFunc: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 				files := map[string]string{
-					"my.file.name.md":  "Dots in name",
+					"my.file.name.md": "Dots in name",
 					"version.2.0.txt": "Version file",
 				}
 				for name, content := range files {

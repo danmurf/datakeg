@@ -6,10 +6,10 @@ import (
 
 func TestGenerator_calculatePairs(t *testing.T) {
 	tests := []struct {
-		name            string
-		pairsPer1K      float64
-		content         string
-		want            int
+		name       string
+		pairsPer1K float64
+		content    string
+		want       int
 	}{
 		{
 			name:       "empty content",
@@ -412,9 +412,9 @@ func TestDefaultConfig(t *testing.T) {
 	config := DefaultConfig()
 
 	tests := []struct {
-		name  string
-		got   interface{}
-		want  interface{}
+		name string
+		got  interface{}
+		want interface{}
 	}{
 		{"PairsPer1KChars", config.PairsPer1KChars, 2.0},
 		{"ValidPercent", config.ValidPercent, 10.0},
@@ -433,9 +433,9 @@ func TestDefaultConfig(t *testing.T) {
 
 func TestNewGenerator(t *testing.T) {
 	tests := []struct {
-		name        string
-		config      Config
-		wantModel   string
+		name      string
+		config    Config
+		wantModel string
 	}{
 		{
 			name: "with specified model",
@@ -484,9 +484,9 @@ func TestGenerator_GetConfig(t *testing.T) {
 	got := g.GetConfig()
 
 	tests := []struct {
-		name  string
-		got   interface{}
-		want  interface{}
+		name string
+		got  interface{}
+		want interface{}
 	}{
 		{"PairsPer1KChars", got.PairsPer1KChars, 3.5},
 		{"ValidPercent", got.ValidPercent, 15.0},

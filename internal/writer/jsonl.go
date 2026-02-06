@@ -20,7 +20,11 @@ func WriteJSONL(filename string, pairs []TrainingPair) error {
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", filename, err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("close file %s: %w", filename, closeErr)
+		}
+	}()
 
 	// Create JSON encoder - Encoder.Encode automatically adds newlines
 	encoder := json.NewEncoder(file)
@@ -46,7 +50,11 @@ func WriteJSONLAppend(filename string, pairs []TrainingPair) error {
 	if err != nil {
 		return fmt.Errorf("open file %s: %w", filename, err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("close file %s: %w", filename, closeErr)
+		}
+	}()
 
 	encoder := json.NewEncoder(file)
 

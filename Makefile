@@ -40,7 +40,7 @@ LDFLAGS := -X 'main.version=$(VERSION)' \
 # Find all Go source files
 GO_FILES := $(shell find . -name '*.go' -type f)
 
-.PHONY: all clean test coverage install help deps tidy
+.PHONY: all clean test coverage install help deps tidy lint
 
 # Default target
 all: $(BINARY_NAME)
@@ -75,6 +75,15 @@ coverage:
 	$(GOTEST) -v -coverprofile=coverage.out ./...
 	$(GOCMD) tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
+
+## lint: Run golangci-lint
+lint:
+	@echo "Running golangci-lint..."
+	@if ! command -v golangci-lint >/dev/null 2>&1; then \
+		echo "golangci-lint not found. Installing..."; \
+		go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; \
+	fi
+	@PATH="$(HOME)/go/bin:$(PATH)" golangci-lint run ./...
 
 ## install: Install the binary to $GOPATH/bin
 install:
