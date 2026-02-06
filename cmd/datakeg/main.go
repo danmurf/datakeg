@@ -36,6 +36,7 @@ var (
 	flagTestPct    float64
 	flagPairsPer1K float64
 	flagTimeout    int
+	flagSkipMerge  bool
 )
 
 var generateCmd = &cobra.Command{
@@ -69,6 +70,7 @@ func init() {
 	generateCmd.Flags().Float64VarP(&flagTestPct, "test-pct", "", 0.2, "Test set percentage (0.0-1.0)")
 	generateCmd.Flags().Float64VarP(&flagPairsPer1K, "pairs-per-1k", "", 1.0, "Target pairs per 1000 characters")
 	generateCmd.Flags().IntVarP(&flagTimeout, "timeout", "t", 30, "Operation timeout in minutes")
+	generateCmd.Flags().BoolVarP(&flagSkipMerge, "skip-merge", "", false, "Skip merging per-document files into master files")
 
 	RootCmd.AddCommand(generateCmd)
 	RootCmd.AddCommand(versionCmd)
@@ -85,7 +87,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  Splits: train=%.0f%%, valid=%.0f%%, test=%.0f%%\n", flagTrainPct*100, flagValidPct*100, flagTestPct*100)
 	fmt.Printf("  Pairs per 1K chars: %.1f\n", flagPairsPer1K)
 
-	return commands.ExecuteGeneratePipeline(sourcePath, outputPath, flagModel, flagPairsPer1K, flagValidPct, flagTestPct, flagTimeout)
+	return commands.ExecuteGeneratePipeline(sourcePath, outputPath, flagModel, flagPairsPer1K, flagValidPct, flagTestPct, flagTimeout, flagSkipMerge)
 }
 
 func main() {

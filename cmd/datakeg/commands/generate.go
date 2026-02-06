@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/danmurf/datakeg/internal/generator"
@@ -18,7 +19,8 @@ import (
 // 1. Load documents from source directory
 // 2. Create Ollama client
 // 3. Generate prompt/completion pairs for each document (train → valid → test with exclusions)
-// 4. Write train/valid/test JSONL files to output directory
+// 4. Write per-document JSONL files during processing
+// 5. Optionally merge into master files (skipable via skipMerge flag)
 func ExecuteGeneratePipeline(
 	sourceDir string,
 	outputDir string,
@@ -27,6 +29,7 @@ func ExecuteGeneratePipeline(
 	validPct float64,
 	testPct float64,
 	timeoutMinutes int,
+	skipMerge bool,
 ) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMinutes)*time.Minute)
 	defer cancel()
@@ -120,6 +123,15 @@ func ExecuteGeneratePipeline(
 					Completion: p.Completion,
 				})
 			}
+
+			// Write per-document train file
+			if len(pairs) > 0 {
+				perDocFile := sanitizeDocName(doc, outputDir, "train")
+				if err := writer.WriteJSONL(perDocFile, convertPairs(pairs)); err != nil {
+					return fmt.Errorf("write per-document train file for %s: %w", doc.Name, err)
+				}
+				fmt.Printf("     → Written %d pairs to %s\n", len(pairs), filepath.Base(perDocFile))
+			}
 		}
 
 		// Step 5b: Generate valid pairs (exclude train pairs)
@@ -138,6 +150,15 @@ func ExecuteGeneratePipeline(
 					Prompt:     p.Prompt,
 					Completion: p.Completion,
 				})
+			}
+
+			// Write per-document valid file
+			if len(pairs) > 0 {
+				perDocFile := sanitizeDocName(doc, outputDir, "valid")
+				if err := writer.WriteJSONL(perDocFile, convertPairs(pairs)); err != nil {
+					return fmt.Errorf("write per-document valid file for %s: %w", doc.Name, err)
+				}
+				fmt.Printf("     → Written %d pairs to %s\n", len(pairs), filepath.Base(perDocFile))
 			}
 		}
 
@@ -159,11 +180,27 @@ func ExecuteGeneratePipeline(
 					Completion: p.Completion,
 				})
 			}
+
+			// Write per-document test file
+			if len(pairs) > 0 {
+				perDocFile := sanitizeDocName(doc, outputDir, "test")
+				if err := writer.WriteJSONL(perDocFile, convertPairs(pairs)); err != nil {
+					return fmt.Errorf("write per-document test file for %s: %w", doc.Name, err)
+				}
+				fmt.Printf("     → Written %d pairs to %s\n", len(pairs), filepath.Base(perDocFile))
+			}
 		}
 	}
 
-	// Step 6: Write output files
+	// Step 6: Write master output files (skipable via --skip-merge)
 	fmt.Printf("Writing output files to %s...\n", outputDir)
+
+	// Skip writing master files if skipMerge is true
+	if skipMerge {
+		fmt.Printf("Skipping master file merge (--skip-merge specified)\n")
+		fmt.Printf("Per-document files written: %d\n", countPerDocFiles(outputDir))
+		return nil
+	}
 
 	if len(trainPairs) > 0 {
 		outFile := filepath.Join(outputDir, "train.jsonl")
@@ -193,4 +230,43 @@ func ExecuteGeneratePipeline(
 	fmt.Printf("Total pairs: train=%d, valid=%d, test=%d\n", len(trainPairs), len(validPairs), len(testPairs))
 
 	return nil
+}
+
+// sanitizeDocName creates a sanitized filename from a document for per-document output.
+// Removes file extension and replaces spaces with underscores.
+func sanitizeDocName(doc processor.Document, outputDir string, split string) string {
+	docName := filepath.Base(doc.Path)
+	ext := filepath.Ext(docName)
+	if ext != "" {
+		docName = docName[:len(docName)-len(ext)]
+	}
+	docName = strings.ReplaceAll(docName, " ", "_")
+	return filepath.Join(outputDir, docName+"_"+split+".jsonl")
+}
+
+// convertPairs converts generator.Pair slice to writer.TrainingPair slice.
+func convertPairs(pairs []generator.Pair) []writer.TrainingPair {
+	result := make([]writer.TrainingPair, len(pairs))
+	for i, p := range pairs {
+		result[i] = writer.TrainingPair{
+			Prompt:     p.Prompt,
+			Completion: p.Completion,
+		}
+	}
+	return result
+}
+
+// countPerDocFiles counts the number of per-document JSONL files in the output directory.
+func countPerDocFiles(outputDir string) int {
+	entries, err := os.ReadDir(outputDir)
+	if err != nil {
+		return 0
+	}
+	count := 0
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".jsonl") && !strings.HasPrefix(e.Name(), "train.jsonl") && !strings.HasPrefix(e.Name(), "valid.jsonl") && !strings.HasPrefix(e.Name(), "test.jsonl") {
+			count++
+		}
+	}
+	return count
 }
