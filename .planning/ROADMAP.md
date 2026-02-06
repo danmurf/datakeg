@@ -51,10 +51,12 @@ Plans:
   4. When deduplication reduces counts below target, additional pairs are generated automatically
   5. User can configure split percentages via flags and final counts match targets
 
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD during planning
+- [ ] 02-01-PLAN.md — TDD: pair validation and deduplication functions
+- [ ] 02-02-PLAN.md — Template exclusion support and Generate() refactor with backfill
+- [ ] 02-03-PLAN.md — Pipeline wiring: cross-split exclusion and split percentage flags
 
 ### Phase 3: Production Ready
 **Goal**: Tool is distribution-ready with embedded templates, advanced CLI features, and professional UX
@@ -84,9 +86,9 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Pipeline | 0/TBD | Not started | - |
-| 2. Smart Generation | 0/TBD | Not started | - |
+| 2. Smart Generation | 0/3 | Not started | - |
 | 3. Production Ready | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-05*
-*Last updated: 2026-02-05*
+*Last updated: 2026-02-06*
