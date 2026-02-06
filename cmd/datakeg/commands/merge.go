@@ -26,11 +26,10 @@ func ExecuteMergePipeline(outputDir string) error {
 
 	// Track totals across all splits
 	totalPairsBySplit := make(map[string]int)
-	filesProcessedBySplit := make(map[string]int)
 
 	// Process each split type
 	for _, split := range splits {
-		pairs := mergeSplitFiles(outputDir, split)
+		pairs, filesProcessed := mergeSplitFiles(outputDir, split)
 		totalPairsBySplit[split] = len(pairs)
 
 		if len(pairs) > 0 {
@@ -39,7 +38,7 @@ func ExecuteMergePipeline(outputDir string) error {
 			if err := writer.WriteJSONL(masterFile, pairs); err != nil {
 				return fmt.Errorf("write %s.jsonl: %w", split, err)
 			}
-			fmt.Printf("  Merged %d pairs from %d files into %s.jsonl\n", len(pairs), filesProcessedBySplit[split], split)
+			fmt.Printf("  Merged %d pairs from %d files into %s.jsonl\n", len(pairs), filesProcessed, split)
 		} else {
 			fmt.Printf("  No pairs found for %s split (no master file created)\n", split)
 		}
@@ -55,14 +54,14 @@ func ExecuteMergePipeline(outputDir string) error {
 }
 
 // mergeSplitFiles finds all per-document files for a given split and merges them.
-func mergeSplitFiles(outputDir string, split string) []writer.TrainingPair {
+func mergeSplitFiles(outputDir string, split string) ([]writer.TrainingPair, int) {
 	pattern := "*_" + split + ".jsonl"
 
 	// Find all matching files
 	matches, err := filepath.Glob(filepath.Join(outputDir, pattern))
 	if err != nil {
 		fmt.Printf("  Error searching for %s files: %v\n", split, err)
-		return nil
+		return nil, 0
 	}
 
 	var allPairs []writer.TrainingPair
@@ -88,11 +87,7 @@ func mergeSplitFiles(outputDir string, split string) []writer.TrainingPair {
 		}
 	}
 
-	if filesProcessed > 0 {
-		fmt.Printf("  Processed %d %s files\n", filesProcessed, split)
-	}
-
-	return allPairs
+	return allPairs, filesProcessed
 }
 
 // readJSONLFile reads a JSONL file and returns all TrainingPair objects.
