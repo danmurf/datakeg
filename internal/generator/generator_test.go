@@ -502,3 +502,120 @@ func TestGenerator_GetConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestValidatePair(t *testing.T) {
+	tests := []struct {
+		name string
+		pair Pair
+		want bool
+	}{
+		{
+			name: "valid pair with non-empty prompt and completion",
+			pair: Pair{Prompt: "What is Go?", Completion: "A programming language."},
+			want: true,
+		},
+		{
+			name: "empty prompt",
+			pair: Pair{Prompt: "", Completion: "A programming language."},
+			want: false,
+		},
+		{
+			name: "empty completion",
+			pair: Pair{Prompt: "What is Go?", Completion: ""},
+			want: false,
+		},
+		{
+			name: "whitespace-only prompt",
+			pair: Pair{Prompt: "   \n\t", Completion: "A programming language."},
+			want: false,
+		},
+		{
+			name: "whitespace-only completion",
+			pair: Pair{Prompt: "What is Go?", Completion: "   \n\t"},
+			want: false,
+		},
+		{
+			name: "both empty",
+			pair: Pair{Prompt: "", Completion: ""},
+			want: false,
+		},
+		{
+			name: "prompt with leading/trailing whitespace but content",
+			pair: Pair{Prompt: "  What is Go?  ", Completion: "  A programming language.  "},
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := validatePair(tt.pair)
+			if got != tt.want {
+				t.Errorf("validatePair(%+v) = %v, want %v", tt.pair, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDeduplicatePairs(t *testing.T) {
+	tests := []struct {
+		name     string
+		pairs    []Pair
+		expected []Pair
+	}{
+		{
+			name:     "no duplicates - all preserved, order maintained",
+			pairs:    []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q2", Completion: "A2"}},
+			expected: []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q2", Completion: "A2"}},
+		},
+		{
+			name:     "exact duplicate - second removed",
+			pairs:    []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q1", Completion: "A1"}},
+			expected: []Pair{{Prompt: "Q1", Completion: "A1"}},
+		},
+		{
+			name:     "same prompt, different completion - both kept",
+			pairs:    []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q1", Completion: "A2"}},
+			expected: []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q1", Completion: "A2"}},
+		},
+		{
+			name:     "different prompt, same completion - both kept",
+			pairs:    []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q2", Completion: "A1"}},
+			expected: []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q2", Completion: "A1"}},
+		},
+		{
+			name:     "multiple duplicates - only first of each kept",
+			pairs:    []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q2", Completion: "A2"}, {Prompt: "Q1", Completion: "A1"}, {Prompt: "Q3", Completion: "A3"}, {Prompt: "Q2", Completion: "A2"}},
+			expected: []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q2", Completion: "A2"}, {Prompt: "Q3", Completion: "A3"}},
+		},
+		{
+			name:     "empty input - empty output",
+			pairs:    []Pair{},
+			expected: []Pair{},
+		},
+		{
+			name:     "single pair - single pair returned",
+			pairs:    []Pair{{Prompt: "Q1", Completion: "A1"}},
+			expected: []Pair{{Prompt: "Q1", Completion: "A1"}},
+		},
+		{
+			name:     "three identical pairs - one pair returned",
+			pairs:    []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q1", Completion: "A1"}, {Prompt: "Q1", Completion: "A1"}},
+			expected: []Pair{{Prompt: "Q1", Completion: "A1"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := deduplicatePairs(tt.pairs)
+			if len(got) != len(tt.expected) {
+				t.Errorf("deduplicatePairs() returned %d pairs, want %d", len(got), len(tt.expected))
+				return
+			}
+			for i := range got {
+				if got[i].Prompt != tt.expected[i].Prompt || got[i].Completion != tt.expected[i].Completion {
+					t.Errorf("deduplicatePairs()[%d] = %+v, want %+v", i, got[i], tt.expected[i])
+				}
+			}
+		})
+	}
+}
