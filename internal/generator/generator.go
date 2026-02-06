@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"os"
 	"strings"
 
 	"github.com/danmurf/datakeg/internal/ollama"
@@ -68,7 +69,8 @@ func (g *Generator) GetConfig() Config {
 }
 
 // Generate creates prompt/completion pairs from a document for a specific split type.
-func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split SplitType) ([]Pair, error) {
+// It accepts excludePairs to avoid regenerating similar pairs.
+func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split SplitType, excludePairs []Pair) ([]Pair, error) {
 	// Calculate pair count using float64 to avoid integer truncation
 	totalPairs := g.calculatePairs(doc.Content)
 	pairCounts := g.calculateSplitCounts(totalPairs)
@@ -92,11 +94,21 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 	// Get the correct template for this split type
 	templateName := g.getTemplateName(split)
 
+	// Convert generator.Pair to templates.ExcludePair for template rendering
+	var excludeTemplatePairs []templates.ExcludePair
+	for _, p := range excludePairs {
+		excludeTemplatePairs = append(excludeTemplatePairs, templates.ExcludePair{
+			Prompt:     p.Prompt,
+			Completion: p.Completion,
+		})
+	}
+
 	// Execute template to get the prompt
 	promptData := templates.PromptData{
 		DocumentContent: doc.Content,
 		PairCount:       count,
 		DocumentName:    doc.Name,
+		ExcludePairs:    excludeTemplatePairs,
 	}
 
 	prompt, err := templates.ExecuteTemplate(templateName, promptData)
@@ -110,10 +122,105 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 		return nil, fmt.Errorf("generate pairs: %w", err)
 	}
 
-	// Parse the response into pairs (implementation depends on response format)
-	pairs := g.parseResponse(response, count)
+	// Parse the response into pairs
+	rawPairs := g.parseResponse(response)
 
-	return pairs, nil
+	// Validate all pairs - discard invalid ones
+	var validPairs []Pair
+	for _, p := range rawPairs {
+		if validatePair(p) {
+			validPairs = append(validPairs, p)
+		}
+	}
+
+	// Deduplicate among themselves
+	uniquePairs := deduplicatePairs(validPairs)
+
+	// Also deduplicate against excludePairs
+	uniquePairs = deduplicateAgainstExclusions(uniquePairs, excludePairs)
+
+	// If we have enough pairs, return them
+	if len(uniquePairs) >= count {
+		return uniquePairs[:count], nil
+	}
+
+	// Backfill loop - retry up to 3 times to reach target count
+	const maxBackfillAttempts = 3
+	allPairs := uniquePairs
+
+	for attempt := 0; attempt < maxBackfillAttempts && len(allPairs) < count; attempt++ {
+		gap := count - len(allPairs)
+
+		// Combine original excludePairs with allPairs we've collected so far
+		newExcludePairs := append(excludePairs, allPairs...)
+
+		// Convert to template format
+		var newExcludeTemplatePairs []templates.ExcludePair
+		for _, p := range newExcludePairs {
+			newExcludeTemplatePairs = append(newExcludeTemplatePairs, templates.ExcludePair{
+				Prompt:     p.Prompt,
+				Completion: p.Completion,
+			})
+		}
+
+		// Execute template with new exclusions and gap as PairCount
+		backfillPromptData := templates.PromptData{
+			DocumentContent: doc.Content,
+			PairCount:       gap,
+			DocumentName:    doc.Name,
+			ExcludePairs:    newExcludeTemplatePairs,
+		}
+
+		backfillPrompt, err := templates.ExecuteTemplate(templateName, backfillPromptData)
+		if err != nil {
+			// Log error but continue with what we have
+			fmt.Fprintf(os.Stderr, "Warning: template execution failed for backfill attempt %d: %v\n", attempt+1, err)
+			continue
+		}
+
+		// Call Ollama for backfill
+		backfillResponse, err := g.client.Generate(ctx, g.config.Model, backfillPrompt)
+		if err != nil {
+			// Log error but continue with what we have
+			fmt.Fprintf(os.Stderr, "Warning: Ollama generate failed for backfill attempt %d: %v\n", attempt+1, err)
+			continue
+		}
+
+		// Parse backfill response
+		backfillPairs := g.parseResponse(backfillResponse)
+
+		// Validate backfill pairs
+		var validBackfillPairs []Pair
+		for _, p := range backfillPairs {
+			if validatePair(p) {
+				validBackfillPairs = append(validBackfillPairs, p)
+			}
+		}
+
+		// Deduplicate backfill pairs among themselves
+		uniqueBackfillPairs := deduplicatePairs(validBackfillPairs)
+
+		// Deduplicate against all pairs we've collected (not just new exclusions)
+		uniqueBackfillPairs = deduplicateAgainstExclusions(uniqueBackfillPairs, allPairs)
+
+		// Append genuinely new pairs to allPairs
+		for _, p := range uniqueBackfillPairs {
+			if len(allPairs) < count {
+				allPairs = append(allPairs, p)
+			}
+		}
+	}
+
+	// Log warning if we couldn't reach target count
+	if len(allPairs) < count {
+		fmt.Fprintf(os.Stderr, "Warning: could not reach target count for %s split after %d attempts (got %d, wanted %d)\n", split, maxBackfillAttempts, len(allPairs), count)
+	}
+
+	// Return what we have (may be less than count if max attempts reached)
+	if len(allPairs) > count {
+		return allPairs[:count], nil
+	}
+	return allPairs, nil
 }
 
 // calculatePairs calculates the total number of pairs based on document length.
@@ -193,7 +300,7 @@ func (g *Generator) getTemplateName(split SplitType) string {
 	}
 }
 
-func (g *Generator) parseResponse(response string, expectedCount int) []Pair {
+func (g *Generator) parseResponse(response string) []Pair {
 	var pairs []Pair
 
 	// Try to parse response only if it's not empty
@@ -225,16 +332,7 @@ func (g *Generator) parseResponse(response string, expectedCount int) []Pair {
 		}
 	}
 
-	// Always ensure we return exactly expectedCount pairs
-	// If we got fewer pairs than expected, pad with empty pairs
-	for len(pairs) < expectedCount {
-		pairs = append(pairs, Pair{
-			Prompt:     "",
-			Completion: "",
-		})
-	}
-
-	return pairs[:expectedCount]
+	return pairs
 }
 
 // parseJSONArrayString parses a string that contains a JSON array
@@ -261,6 +359,28 @@ func deduplicatePairs(pairs []Pair) []Pair {
 		key := fmt.Sprintf("%s|||%s", p.Prompt, p.Completion)
 		if _, exists := seen[key]; !exists {
 			seen[key] = struct{}{}
+			result = append(result, p)
+		}
+	}
+	return result
+}
+
+// deduplicateAgainstExclusions removes pairs that match entries in excludePairs.
+// A pair matches if both prompt AND completion are identical (case-sensitive).
+// Unlike deduplicatePairs, this does NOT deduplicate within the input pairs.
+func deduplicateAgainstExclusions(pairs []Pair, excludePairs []Pair) []Pair {
+	// Build a set of excluded pair keys
+	excluded := make(map[string]struct{})
+	for _, ep := range excludePairs {
+		key := fmt.Sprintf("%s|||%s", ep.Prompt, ep.Completion)
+		excluded[key] = struct{}{}
+	}
+
+	// Filter out pairs that are in the exclusion set
+	var result []Pair
+	for _, p := range pairs {
+		key := fmt.Sprintf("%s|||%s", p.Prompt, p.Completion)
+		if _, exists := excluded[key]; !exists {
 			result = append(result, p)
 		}
 	}

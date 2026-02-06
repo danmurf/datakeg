@@ -255,15 +255,13 @@ func TestGenerator_getTemplateName(t *testing.T) {
 
 func TestGenerator_parseResponse(t *testing.T) {
 	tests := []struct {
-		name          string
-		response      string
-		expectedCount int
-		want          []Pair
+		name     string
+		response string
+		want     []Pair
 	}{
 		{
-			name:          "valid single pair",
-			response:      `[{"prompt": "What is Go?", "completion": "A programming language."}]`,
-			expectedCount: 1,
+			name:     "valid single pair",
+			response: `[{"prompt": "What is Go?", "completion": "A programming language."}]`,
 			want: []Pair{
 				{Prompt: "What is Go?", Completion: "A programming language."},
 			},
@@ -274,112 +272,80 @@ func TestGenerator_parseResponse(t *testing.T) {
 				{"prompt": "Q1", "completion": "A1"},
 				{"prompt": "Q2", "completion": "A2"}
 			]`,
-			expectedCount: 2,
 			want: []Pair{
 				{Prompt: "Q1", Completion: "A1"},
 				{Prompt: "Q2", Completion: "A2"},
 			},
 		},
 		{
-			name:          "response with extra text before JSON",
-			response:      `Here are the pairs:\n[{"prompt": "Q", "completion": "A"}]`,
-			expectedCount: 1,
+			name:     "response with extra text before JSON",
+			response: `Here are the pairs:\n[{"prompt": "Q", "completion": "A"}]`,
 			want: []Pair{
 				{Prompt: "Q", Completion: "A"},
 			},
 		},
 		{
-			name:          "response with extra text after JSON",
-			response:      `[{"prompt": "Q", "completion": "A"}]\nThese are good pairs.`,
-			expectedCount: 1,
+			name:     "response with extra text after JSON",
+			response: `[{"prompt": "Q", "completion": "A"}]\nThese are good pairs.`,
 			want: []Pair{
 				{Prompt: "Q", Completion: "A"},
 			},
 		},
 		{
-			name:          "empty response",
-			response:      "",
-			expectedCount: 1,
-			want: []Pair{
-				{Prompt: "", Completion: ""},
-			},
+			name:     "empty response",
+			response: "",
+			want:     []Pair{},
 		},
 		{
-			name:          "whitespace only",
-			response:      "   \n\t  ",
-			expectedCount: 1,
-			want: []Pair{
-				{Prompt: "", Completion: ""},
-			},
+			name:     "whitespace only",
+			response: "   \n\t  ",
+			want:     []Pair{},
 		},
 		{
-			name:          "no JSON array",
-			response:      "Just some text without JSON",
-			expectedCount: 1,
-			want: []Pair{
-				{Prompt: "", Completion: ""},
-			},
+			name:     "no JSON array",
+			response: "Just some text without JSON",
+			want:     []Pair{},
 		},
 		{
-			name:          "malformed JSON",
-			response:      `[{"prompt": "Q", "completion": }]`,
-			expectedCount: 1,
-			want: []Pair{
-				{Prompt: "", Completion: ""},
-			},
+			name:     "malformed JSON",
+			response: `[{"prompt": "Q", "completion": }]`,
+			want:     []Pair{},
 		},
 		{
-			name:          "fewer pairs than expected pads with empty",
-			response:      `[{"prompt": "Q1", "completion": "A1"}]`,
-			expectedCount: 3,
-			want: []Pair{
-				{Prompt: "Q1", Completion: "A1"},
-				{Prompt: "", Completion: ""},
-				{Prompt: "", Completion: ""},
-			},
-		},
-		{
-			name: "more pairs than expected truncates",
+			name: "more pairs returned than before - no truncation",
 			response: `[
 				{"prompt": "Q1", "completion": "A1"},
 				{"prompt": "Q2", "completion": "A2"},
 				{"prompt": "Q3", "completion": "A3"}
 			]`,
-			expectedCount: 2,
 			want: []Pair{
 				{Prompt: "Q1", Completion: "A1"},
 				{Prompt: "Q2", Completion: "A2"},
+				{Prompt: "Q3", Completion: "A3"},
 			},
 		},
 		{
-			name:          "empty array",
-			response:      `[]`,
-			expectedCount: 2,
-			want: []Pair{
-				{Prompt: "", Completion: ""},
-				{Prompt: "", Completion: ""},
-			},
+			name:     "empty array",
+			response: `[]`,
+			want:     []Pair{},
 		},
 		{
-			name:          "JSON with escaped quotes",
-			response:      `[{"prompt": "What's \"Go\"?", "completion": "It's a language."}]`,
-			expectedCount: 1,
+			name:     "JSON with escaped quotes",
+			response: `[{"prompt": "What's \"Go\"?", "completion": "It's a language."}]`,
 			want: []Pair{
 				{Prompt: `What's "Go"?`, Completion: "It's a language."},
 			},
 		},
 		{
-			name:          "nested JSON should extract outer",
-			response:      `[{"prompt": "Q", "completion": "A"}]`,
-			expectedCount: 1,
+			name:     "nested JSON should extract outer",
+			response: `[{"prompt": "Q", "completion": "A"}]`,
 			want: []Pair{
 				{Prompt: "Q", Completion: "A"},
 			},
 		},
 		{
-			name:          "multiline content in pairs",
-			response:      `[{"prompt": "Line1\nLine2", "completion": "Answer1\nAnswer2"}]`,
-			expectedCount: 1,
+			name:     "multiline content in pairs",
+			response: `[{"prompt": "Line1\nLine2", "completion": "Answer1\nAnswer2"}]`,
 			want: []Pair{
 				{Prompt: "Line1\nLine2", Completion: "Answer1\nAnswer2"},
 			},
@@ -389,7 +355,7 @@ func TestGenerator_parseResponse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewGenerator(nil, DefaultConfig())
-			got := g.parseResponse(tt.response, tt.expectedCount)
+			got := g.parseResponse(tt.response)
 
 			if len(got) != len(tt.want) {
 				t.Errorf("parseResponse() returned %d pairs, want %d", len(got), len(tt.want))
@@ -614,6 +580,85 @@ func TestDeduplicatePairs(t *testing.T) {
 			for i := range got {
 				if got[i].Prompt != tt.expected[i].Prompt || got[i].Completion != tt.expected[i].Completion {
 					t.Errorf("deduplicatePairs()[%d] = %+v, want %+v", i, got[i], tt.expected[i])
+				}
+			}
+		})
+	}
+}
+
+func TestDeduplicateAgainstExclusions(t *testing.T) {
+	tests := []struct {
+		name          string
+		pairs         []Pair
+		excludePairs  []Pair
+		expectedPairs []Pair
+	}{
+		{
+			name:          "no exclusions - all pairs kept",
+			pairs:         []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q2", Completion: "A2"}},
+			excludePairs:  []Pair{},
+			expectedPairs: []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q2", Completion: "A2"}},
+		},
+		{
+			name:          "nil exclusions - all pairs kept",
+			pairs:         []Pair{{Prompt: "Q1", Completion: "A1"}},
+			excludePairs:  nil,
+			expectedPairs: []Pair{{Prompt: "Q1", Completion: "A1"}},
+		},
+		{
+			name:          "exact match excluded - pair removed",
+			pairs:         []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q2", Completion: "A2"}},
+			excludePairs:  []Pair{{Prompt: "Q1", Completion: "A1"}},
+			expectedPairs: []Pair{{Prompt: "Q2", Completion: "A2"}},
+		},
+		{
+			name:          "multiple exclusions - multiple pairs removed",
+			pairs:         []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q2", Completion: "A2"}, {Prompt: "Q3", Completion: "A3"}},
+			excludePairs:  []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q3", Completion: "A3"}},
+			expectedPairs: []Pair{{Prompt: "Q2", Completion: "A2"}},
+		},
+		{
+			name:          "same prompt different completion - only matching completion excluded",
+			pairs:         []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q1", Completion: "A2"}},
+			excludePairs:  []Pair{{Prompt: "Q1", Completion: "A1"}},
+			expectedPairs: []Pair{{Prompt: "Q1", Completion: "A2"}},
+		},
+		{
+			name:          "same completion different prompt - only matching prompt excluded",
+			pairs:         []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q2", Completion: "A1"}},
+			excludePairs:  []Pair{{Prompt: "Q1", Completion: "A1"}},
+			expectedPairs: []Pair{{Prompt: "Q2", Completion: "A1"}},
+		},
+		{
+			name:          "all pairs excluded - empty result",
+			pairs:         []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q2", Completion: "A2"}},
+			excludePairs:  []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q2", Completion: "A2"}},
+			expectedPairs: []Pair{},
+		},
+		{
+			name:          "empty pairs - empty result",
+			pairs:         []Pair{},
+			excludePairs:  []Pair{{Prompt: "Q1", Completion: "A1"}},
+			expectedPairs: []Pair{},
+		},
+		{
+			name:          "duplicate pairs - duplicates preserved after exclusion filtering",
+			pairs:         []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q1", Completion: "A1"}},
+			excludePairs:  []Pair{},
+			expectedPairs: []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q1", Completion: "A1"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := deduplicateAgainstExclusions(tt.pairs, tt.excludePairs)
+			if len(got) != len(tt.expectedPairs) {
+				t.Errorf("deduplicateAgainstExclusions() returned %d pairs, want %d", len(got), len(tt.expectedPairs))
+				return
+			}
+			for i := range got {
+				if got[i].Prompt != tt.expectedPairs[i].Prompt || got[i].Completion != tt.expectedPairs[i].Completion {
+					t.Errorf("deduplicateAgainstExclusions()[%d] = %+v, want %+v", i, got[i], tt.expectedPairs[i])
 				}
 			}
 		})
