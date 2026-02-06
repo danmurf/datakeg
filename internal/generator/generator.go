@@ -88,7 +88,7 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 	}
 
 	if count <= 0 {
-		return nil, fmt.Errorf("pair count is zero or negative for %s split", split)
+		return nil, nil
 	}
 
 	// Get the correct template for this split type

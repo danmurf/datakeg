@@ -17,13 +17,15 @@ import (
 // ExecuteGeneratePipeline orchestrates the full generate pipeline:
 // 1. Load documents from source directory
 // 2. Create Ollama client
-// 3. Generate prompt/completion pairs for each document
+// 3. Generate prompt/completion pairs for each document (train → valid → test with exclusions)
 // 4. Write train/valid/test JSONL files to output directory
 func ExecuteGeneratePipeline(
 	sourceDir string,
 	outputDir string,
 	model string,
 	pairsPer1K float64,
+	validPct float64,
+	testPct float64,
 	timeoutMinutes int,
 ) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMinutes)*time.Minute)
@@ -51,10 +53,11 @@ func ExecuteGeneratePipeline(
 	}
 
 	// Step 3: Create generator with config
+	// CLI uses 0.0-1.0 range but config uses 0-100 percentage
 	genConfig := generator.Config{
 		PairsPer1KChars: pairsPer1K,
-		ValidPercent:    10.0,
-		TestPercent:     10.0,
+		ValidPercent:    validPct * 100,
+		TestPercent:     testPct * 100,
 		Model:           model,
 	}
 	gen := generator.NewGenerator(ollamaClient, genConfig)
@@ -64,7 +67,9 @@ func ExecuteGeneratePipeline(
 		return fmt.Errorf("create output directory: %w", err)
 	}
 
-	// Step 5: Process documents and collect pairs
+	// Step 5: Process documents and collect pairs sequentially with cross-split exclusion
+	// Train → Valid (exclude train) → Test (exclude train+valid)
+	// Per-document pairs reset between documents (no cross-document dedup)
 	var trainPairs []writer.TrainingPair
 	var validPairs []writer.TrainingPair
 	var testPairs []writer.TrainingPair
@@ -73,16 +78,15 @@ func ExecuteGeneratePipeline(
 		docPath, _ := filepath.Rel(sourceDir, doc.Path)
 		fmt.Printf("[%d/%d] Processing: %s (%d chars)\n", i+1, len(documents), docPath, len(doc.Content))
 
-		// Calculate and announce pair counts for each split
+		// Get pair counts from generator config
+		genCfg := gen.GetConfig()
 		totalPairs := int(math.Ceil(float64(len(doc.Content)) / 1000 * pairsPer1K))
-
-		// Use the generator's config to calculate splits
-		genConfig := gen.GetConfig()
-		validCount := int(math.Ceil(float64(totalPairs) * genConfig.ValidPercent / 100))
-		testCount := int(math.Ceil(float64(totalPairs) * genConfig.TestPercent / 100))
+		// Use the same split calculation logic as the generator
+		validCount := int(math.Ceil(float64(totalPairs) * genCfg.ValidPercent / 100))
+		testCount := int(math.Ceil(float64(totalPairs) * genCfg.TestPercent / 100))
 		trainCount := totalPairs - validCount - testCount
 
-		// Handle edge cases for small documents
+		// Handle edge cases for small documents (same logic as generator)
 		if totalPairs == 1 {
 			trainCount = 1
 			validCount = 0
@@ -93,36 +97,64 @@ func ExecuteGeneratePipeline(
 			testCount = 0
 		}
 
-		fmt.Printf("     → Generating: %d train, %d valid, %d test pairs\n", trainCount, validCount, testCount)
+		fmt.Printf("     → Target: %d train, %d valid, %d test pairs\n", trainCount, validCount, testCount)
 
-		// Generate for each split type (only if count > 0)
-		splits := []struct {
-			name      string
-			splitType generator.SplitType
-			pairs     *[]writer.TrainingPair
-			count     int
-		}{
-			{"train", generator.SplitTrain, &trainPairs, trainCount},
-			{"valid", generator.SplitValid, &validPairs, validCount},
-			{"test", generator.SplitTest, &testPairs, testCount},
+		// Per-document pair tracking (resets each iteration for no cross-document dedup)
+		var docTrainPairs []generator.Pair
+		var docValidPairs []generator.Pair
+
+		// Step 5a: Generate train pairs (no exclusions)
+		if trainCount > 0 {
+			fmt.Printf("     → Generating train pairs...\n")
+			pairs, err := gen.Generate(ctx, &doc, generator.SplitTrain, nil)
+			if err != nil {
+				return fmt.Errorf("generate train pairs for %s: %w", doc.Name, err)
+			}
+			docTrainPairs = pairs
+			fmt.Printf("     → Train: %d pairs generated\n", len(pairs))
+
+			// Convert and append to global train slice
+			for _, p := range pairs {
+				trainPairs = append(trainPairs, writer.TrainingPair{
+					Prompt:     p.Prompt,
+					Completion: p.Completion,
+				})
+			}
 		}
 
-		for _, split := range splits {
-			if split.count <= 0 {
-				fmt.Printf("     → Skipping %s split (0 pairs required)\n", split.name)
-				continue
-			}
-
-			fmt.Printf("     → Calling LLM for %s split...\n", split.name)
-			pairs, err := gen.Generate(ctx, &doc, split.splitType)
+		// Step 5b: Generate valid pairs (exclude train pairs)
+		if validCount > 0 {
+			fmt.Printf("     → Generating valid pairs (excluding %d train pairs)...\n", len(docTrainPairs))
+			pairs, err := gen.Generate(ctx, &doc, generator.SplitValid, docTrainPairs)
 			if err != nil {
-				return fmt.Errorf("generate %s pairs for %s: %w", split.splitType, doc.Name, err)
+				return fmt.Errorf("generate valid pairs for %s: %w", doc.Name, err)
 			}
-			fmt.Printf("     → %s split: %d pairs generated\n", split.name, len(pairs))
+			docValidPairs = pairs
+			fmt.Printf("     → Valid: %d pairs generated\n", len(pairs))
 
-			// Convert generator.Pair to writer.TrainingPair
+			// Convert and append to global valid slice
 			for _, p := range pairs {
-				*split.pairs = append(*split.pairs, writer.TrainingPair{
+				validPairs = append(validPairs, writer.TrainingPair{
+					Prompt:     p.Prompt,
+					Completion: p.Completion,
+				})
+			}
+		}
+
+		// Step 5c: Generate test pairs (exclude train + valid pairs)
+		if testCount > 0 {
+			// Combine train and valid exclusions
+			allExclude := append(docTrainPairs, docValidPairs...)
+			fmt.Printf("     → Generating test pairs (excluding %d train+valid pairs)...\n", len(allExclude))
+			pairs, err := gen.Generate(ctx, &doc, generator.SplitTest, allExclude)
+			if err != nil {
+				return fmt.Errorf("generate test pairs for %s: %w", doc.Name, err)
+			}
+			fmt.Printf("     → Test: %d pairs generated\n", len(pairs))
+
+			// Convert and append to global test slice
+			for _, p := range pairs {
+				testPairs = append(testPairs, writer.TrainingPair{
 					Prompt:     p.Prompt,
 					Completion: p.Completion,
 				})
