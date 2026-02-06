@@ -245,3 +245,24 @@ func parseJSONArrayString(s string) ([]Pair, error) {
 	}
 	return pairs, nil
 }
+
+// validatePair returns true if the pair has non-empty, non-whitespace prompt and completion.
+func validatePair(p Pair) bool {
+	return strings.TrimSpace(p.Prompt) != "" && strings.TrimSpace(p.Completion) != ""
+}
+
+// deduplicatePairs removes exact duplicate pairs. A pair is a duplicate if both
+// prompt AND completion match a previously seen pair (case-sensitive).
+// Uses map[string]struct{} as a hash set with "prompt|||completion" as key.
+func deduplicatePairs(pairs []Pair) []Pair {
+	seen := make(map[string]struct{})
+	var result []Pair
+	for _, p := range pairs {
+		key := fmt.Sprintf("%s|||%s", p.Prompt, p.Completion)
+		if _, exists := seen[key]; !exists {
+			seen[key] = struct{}{}
+			result = append(result, p)
+		}
+	}
+	return result
+}
