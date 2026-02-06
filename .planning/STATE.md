@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2025-02-05)
 ## Current Position
 
 Phase: 2 of 3 (Smart Generation)
-Plan: 2 of 3 in current phase
-Status: ExcludePairs support added to templates and Generate() refactored with validation, deduplication, exclusion filtering, and backfill
-Last activity: 2026-02-06 — Completed 02-02-PLAN.md with exclusion support and Generate() refactoring
+Plan: 3 of 3 in current phase
+Status: Pipeline wired with cross-split exclusion and CLI split percentage flags passed through to generator config
+Last activity: 2026-02-06 — Completed 02-03-PLAN.md with pipeline wiring complete
 
-Progress: [████░░░░░░░░░] 66%
+Progress: [████████░░░░] 100%
 
 ## Performance Metrics
 
@@ -63,8 +63,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-06 (plan 02-02 execution)
-Stopped at: Completed 02-02-PLAN.md with exclusion support and Generate() refactoring
+Last session: 2026-02-06 (plan 02-03 execution)
+Stopped at: Completed 02-03-PLAN.md with pipeline wiring complete
 Resume file: None
 
 ---
