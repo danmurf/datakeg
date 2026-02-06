@@ -77,7 +77,7 @@ func init() {
 	generateCmd.Flags().Float64VarP(&flagTrainPct, "train-pct", "", 0.6, "Training set percentage (0.0-1.0)")
 	generateCmd.Flags().Float64VarP(&flagValidPct, "valid-pct", "", 0.2, "Validation set percentage (0.0-1.0)")
 	generateCmd.Flags().Float64VarP(&flagTestPct, "test-pct", "", 0.2, "Test set percentage (0.0-1.0)")
-	generateCmd.Flags().Float64VarP(&flagPairsPer1K, "pairs-per-1k", "", 1.0, "Target pairs per 1000 characters")
+	generateCmd.Flags().Float64VarP(&flagPairsPer1K, "pairs-per-1k", "", 10.0, "Target pairs per 1000 characters")
 	generateCmd.Flags().IntVarP(&flagTimeout, "timeout", "t", 30, "Operation timeout in minutes")
 	generateCmd.Flags().BoolVarP(&flagSkipMerge, "skip-merge", "", false, "Skip merging per-document files into master files")
 

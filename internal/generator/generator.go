@@ -33,7 +33,7 @@ type Config struct {
 // DefaultConfig returns a sensible default configuration.
 func DefaultConfig() Config {
 	return Config{
-		PairsPer1KChars: 2.0,
+		PairsPer1KChars: 10.0,
 		ValidPercent:    10.0,
 		TestPercent:     10.0,
 		Model:           "gpt-oss:20b",
