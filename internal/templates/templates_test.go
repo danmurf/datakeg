@@ -75,7 +75,7 @@ func TestExecuteTemplate_test(t *testing.T) {
 	if !strings.Contains(result, "2") {
 		t.Error("ExecuteTemplate() missing PairCount")
 	}
-	if !strings.Contains(result, "test data") {
+	if !strings.Contains(result, "TEST data") {
 		t.Error("ExecuteTemplate() wrong template used")
 	}
 }
@@ -110,7 +110,7 @@ func TestExecuteTemplate_excludePairs(t *testing.T) {
 	}
 
 	// Verify exclusion section is rendered
-	if !strings.Contains(result, "Do NOT generate pairs similar to these previously generated pairs") {
+	if !strings.Contains(result, "Do NOT generate questions that are semantically similar to any of the following") {
 		t.Error("ExecuteTemplate() missing exclusion instruction")
 	}
 	if !strings.Contains(result, "Q1") {
@@ -141,7 +141,7 @@ func TestExecuteTemplate_noExcludePairs(t *testing.T) {
 	}
 
 	// Verify exclusion section is NOT rendered
-	if strings.Contains(result, "Do NOT generate pairs similar to these previously generated pairs") {
+	if strings.Contains(result, "Do NOT generate questions that are semantically similar to any of the following") {
 		t.Error("ExecuteTemplate() should not render exclusion section when ExcludePairs is nil")
 	}
 	if strings.Contains(result, "Prompt:") {
@@ -163,7 +163,7 @@ func TestExecuteTemplate_emptyExcludePairs(t *testing.T) {
 	}
 
 	// Verify exclusion section is NOT rendered
-	if strings.Contains(result, "Do NOT generate pairs similar to these previously generated pairs") {
+	if strings.Contains(result, "Do NOT generate questions that are semantically similar to any of the following") {
 		t.Error("ExecuteTemplate() should not render exclusion section when ExcludePairs is empty")
 	}
 }

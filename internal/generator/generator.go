@@ -72,8 +72,8 @@ func (g *Generator) GetConfig() Config {
 // It accepts excludePairs to avoid regenerating similar pairs.
 func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split SplitType, excludePairs []Pair) ([]Pair, error) {
 	// Calculate pair count using float64 to avoid integer truncation
-	totalPairs := g.calculatePairs(doc.Content)
-	pairCounts := g.calculateSplitCounts(totalPairs)
+	totalPairs := g.CalculatePairs(doc.Content)
+	pairCounts := g.CalculateSplitCounts(totalPairs)
 
 	var count int
 	switch split {
@@ -200,8 +200,8 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 		// Deduplicate backfill pairs among themselves
 		uniqueBackfillPairs := deduplicatePairs(validBackfillPairs)
 
-		// Deduplicate against all pairs we've collected (not just new exclusions)
-		uniqueBackfillPairs = deduplicateAgainstExclusions(uniqueBackfillPairs, allPairs)
+		// Deduplicate against both original excludePairs and all pairs we've collected
+		uniqueBackfillPairs = deduplicateAgainstExclusions(uniqueBackfillPairs, append(excludePairs, allPairs...))
 
 		// Append genuinely new pairs to allPairs
 		for _, p := range uniqueBackfillPairs {
@@ -223,9 +223,9 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 	return allPairs, nil
 }
 
-// calculatePairs calculates the total number of pairs based on document length.
+// CalculatePairs calculates the total number of pairs based on document length.
 // Minimum 1 pair for any non-empty document.
-func (g *Generator) calculatePairs(content string) int {
+func (g *Generator) CalculatePairs(content string) int {
 	charCount := float64(len(content))
 	pairs := math.Ceil(charCount / 1000 * g.config.PairsPer1KChars)
 
@@ -243,8 +243,10 @@ type SplitCounts struct {
 	Test  int
 }
 
-// calculateSplitCounts distributes pairs across splits using float64 math.
-func (g *Generator) calculateSplitCounts(total int) SplitCounts {
+// CalculateSplitCounts distributes pairs across splits using float64 math.
+// Valid and test are rounded to nearest integer; train gets the remainder
+// to ensure the total is preserved exactly.
+func (g *Generator) CalculateSplitCounts(total int) SplitCounts {
 	if total <= 0 {
 		return SplitCounts{Train: 0, Valid: 0, Test: 0}
 	}
@@ -259,24 +261,27 @@ func (g *Generator) calculateSplitCounts(total int) SplitCounts {
 		return SplitCounts{Train: 1, Valid: 1, Test: 0}
 	}
 
-	validCount := int(math.Ceil(float64(total) * g.config.ValidPercent / 100))
-	testCount := int(math.Ceil(float64(total) * g.config.TestPercent / 100))
-	// Train gets the remainder
-	trainCount := total - validCount - testCount
+	validCount := int(math.Round(float64(total) * g.config.ValidPercent / 100))
+	testCount := int(math.Round(float64(total) * g.config.TestPercent / 100))
 
-	// Ensure minimum 1 pair for each split when possible
-	if trainCount < 1 && total >= 3 {
-		trainCount = 1
-		// Redistribute the extra pair
-		remaining := total - 1
-		validCount = int(math.Ceil(float64(remaining) * g.config.ValidPercent / 100))
-		testCount = remaining - validCount
-	}
-	if validCount < 1 && total >= 2 {
+	// Ensure minimum 1 for valid and test when total >= 3
+	if validCount < 1 {
 		validCount = 1
 	}
-	if testCount < 1 && total >= 3 {
+	if testCount < 1 {
 		testCount = 1
+	}
+
+	// Train gets the remainder to ensure total is preserved exactly
+	trainCount := total - validCount - testCount
+
+	// Ensure minimum 1 for train (reduce valid/test proportionally if needed)
+	if trainCount < 1 {
+		trainCount = 1
+		remaining := total - 1
+		validRatio := g.config.ValidPercent / (g.config.ValidPercent + g.config.TestPercent)
+		validCount = int(math.Round(float64(remaining) * validRatio))
+		testCount = remaining - validCount
 	}
 
 	return SplitCounts{

@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,9 +30,6 @@ func ExecuteGeneratePipeline(
 	timeoutMinutes int,
 	skipMerge bool,
 ) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMinutes)*time.Minute)
-	defer cancel()
-
 	fmt.Printf("Starting pipeline...\n")
 
 	// Step 1: Load documents from source directory
@@ -81,24 +77,15 @@ func ExecuteGeneratePipeline(
 		docPath, _ := filepath.Rel(sourceDir, doc.Path)
 		fmt.Printf("[%d/%d] Processing: %s (%d chars)\n", i+1, len(documents), docPath, len(doc.Content))
 
-		// Get pair counts from generator config
-		genCfg := gen.GetConfig()
-		totalPairs := int(math.Ceil(float64(len(doc.Content)) / 1000 * pairsPer1K))
-		// Use the same split calculation logic as the generator
-		validCount := int(math.Ceil(float64(totalPairs) * genCfg.ValidPercent / 100))
-		testCount := int(math.Ceil(float64(totalPairs) * genCfg.TestPercent / 100))
-		trainCount := totalPairs - validCount - testCount
+		// Per-document timeout so each document gets the full timeout duration
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMinutes)*time.Minute)
 
-		// Handle edge cases for small documents (same logic as generator)
-		if totalPairs == 1 {
-			trainCount = 1
-			validCount = 0
-			testCount = 0
-		} else if totalPairs == 2 {
-			trainCount = 1
-			validCount = 1
-			testCount = 0
-		}
+		// Get pair counts from the generator (single source of truth)
+		totalPairs := gen.CalculatePairs(doc.Content)
+		pairCounts := gen.CalculateSplitCounts(totalPairs)
+		trainCount := pairCounts.Train
+		validCount := pairCounts.Valid
+		testCount := pairCounts.Test
 
 		fmt.Printf("     → Target: %d train, %d valid, %d test pairs\n", trainCount, validCount, testCount)
 
@@ -111,6 +98,7 @@ func ExecuteGeneratePipeline(
 			fmt.Printf("     → Generating train pairs...\n")
 			pairs, err := gen.Generate(ctx, &doc, generator.SplitTrain, nil)
 			if err != nil {
+				cancel()
 				return fmt.Errorf("failed to generate training pairs for %s. This may be a temporary Ollama issue. Try again, or try a different model", doc.Name)
 			}
 			docTrainPairs = pairs
@@ -128,6 +116,7 @@ func ExecuteGeneratePipeline(
 			if len(pairs) > 0 {
 				perDocFile := sanitizeDocName(doc, outputDir, "train")
 				if err := writer.WriteJSONL(perDocFile, convertPairs(pairs)); err != nil {
+					cancel()
 					return fmt.Errorf("failed to write %s. Check disk space and write permissions", filepath.Base(perDocFile))
 				}
 				fmt.Printf("     → Written %d pairs to %s\n", len(pairs), filepath.Base(perDocFile))
@@ -139,6 +128,7 @@ func ExecuteGeneratePipeline(
 			fmt.Printf("     → Generating valid pairs (excluding %d train pairs)...\n", len(docTrainPairs))
 			pairs, err := gen.Generate(ctx, &doc, generator.SplitValid, docTrainPairs)
 			if err != nil {
+				cancel()
 				return fmt.Errorf("failed to generate validation pairs for %s. This may be a temporary Ollama issue. Try again, or try a different model", doc.Name)
 			}
 			docValidPairs = pairs
@@ -156,6 +146,7 @@ func ExecuteGeneratePipeline(
 			if len(pairs) > 0 {
 				perDocFile := sanitizeDocName(doc, outputDir, "valid")
 				if err := writer.WriteJSONL(perDocFile, convertPairs(pairs)); err != nil {
+					cancel()
 					return fmt.Errorf("failed to write %s. Check disk space and write permissions", filepath.Base(perDocFile))
 				}
 				fmt.Printf("     → Written %d pairs to %s\n", len(pairs), filepath.Base(perDocFile))
@@ -169,6 +160,7 @@ func ExecuteGeneratePipeline(
 			fmt.Printf("     → Generating test pairs (excluding %d train+valid pairs)...\n", len(allExclude))
 			pairs, err := gen.Generate(ctx, &doc, generator.SplitTest, allExclude)
 			if err != nil {
+				cancel()
 				return fmt.Errorf("failed to generate test pairs for %s. This may be a temporary Ollama issue. Try again, or try a different model", doc.Name)
 			}
 			fmt.Printf("     → Test: %d pairs generated\n", len(pairs))
@@ -185,11 +177,14 @@ func ExecuteGeneratePipeline(
 			if len(pairs) > 0 {
 				perDocFile := sanitizeDocName(doc, outputDir, "test")
 				if err := writer.WriteJSONL(perDocFile, convertPairs(pairs)); err != nil {
+					cancel()
 					return fmt.Errorf("failed to write %s. Check disk space and write permissions", filepath.Base(perDocFile))
 				}
 				fmt.Printf("     → Written %d pairs to %s\n", len(pairs), filepath.Base(perDocFile))
 			}
 		}
+
+		cancel()
 	}
 
 	// Step 6: Write master output files (skipable via --skip-merge)

@@ -82,7 +82,7 @@ func TestGenerator_calculatePairs(t *testing.T) {
 				Model:           "test-model",
 			}
 			g := NewGenerator(nil, config)
-			got := g.calculatePairs(tt.content)
+			got := g.CalculatePairs(tt.content)
 			if got != tt.want {
 				t.Errorf("calculatePairs() = %v, want %v (content length: %d)", got, tt.want, len(tt.content))
 			}
@@ -182,6 +182,20 @@ func TestGenerator_calculateSplitCounts(t *testing.T) {
 			testPercent:  5.0,
 			want:         SplitCounts{Train: 90, Valid: 5, Test: 5},
 		},
+		{
+			name:         "non-integer split rounds correctly 201 at 20-20",
+			total:        201,
+			validPercent: 20.0,
+			testPercent:  20.0,
+			want:         SplitCounts{Train: 121, Valid: 40, Test: 40},
+		},
+		{
+			name:         "non-integer split rounds correctly 42 at 20-20",
+			total:        42,
+			validPercent: 20.0,
+			testPercent:  20.0,
+			want:         SplitCounts{Train: 26, Valid: 8, Test: 8},
+		},
 	}
 
 	for _, tt := range tests {
@@ -193,7 +207,7 @@ func TestGenerator_calculateSplitCounts(t *testing.T) {
 				Model:           "test-model",
 			}
 			g := NewGenerator(nil, config)
-			got := g.calculateSplitCounts(tt.total)
+			got := g.CalculateSplitCounts(tt.total)
 			if got != tt.want {
 				t.Errorf("calculateSplitCounts() = %+v, want %+v", got, tt.want)
 			}
