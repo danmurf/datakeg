@@ -139,10 +139,11 @@ Plans:
   4. Deduplication and exclusion logic works correctly with the reasoning format
   5. All existing features (per-doc files, merge, skip-merge, provider selection) work with reasoning format
 
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 6 to break down)
+- [ ] 06-01-PLAN.md — FormatReasoning enum, reasoning templates, reasoning response parser, ReasoningFormat variants
+- [ ] 06-02-PLAN.md — CLI flags (--reasoning-format), reasoning JSONL writer, pipeline wiring
 
 ### Phase 7: Claude Provider Support
 **Goal**: Users can generate training data using their Anthropic API key / Claude subscription, leveraging the provider abstraction from Phase 4
@@ -175,9 +176,9 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Production Ready | 3/3 | ✓ Complete | 2026-02-06 |
 | 4. Multi-Provider Support | 0/3 | Not Started | — |
 | 5. Chat Format Support | 0/? | Not Started | — |
-| 6. Reasoning Format Support | 0/? | Not Started | — |
+| 6. Reasoning Format Support | 0/2 | Not Started | — |
 | 7. Claude Provider Support | 0/? | Not Started | — |
 
 ---
 *Roadmap created: 2025-02-05*
-*Last updated: 2026-02-07 (Phase 4 planned)*
+*Last updated: 2026-02-07 (Phase 6 planned)*
