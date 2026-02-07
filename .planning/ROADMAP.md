@@ -19,6 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 5: Chat Format Support** - Chat-style training data with messages/roles JSONL output
 - [ ] **Phase 6: Reasoning Format Support** - Chain-of-thought training data for reasoning models
 - [ ] **Phase 7: Claude Provider Support** - Anthropic API provider for generating data via Claude subscription
+- [ ] **Phase 8: Format Conversion** - Convert generated JSONL to model-specific training formats via templates
 
 ## Phase Details
 
@@ -164,10 +165,29 @@ Plans:
 Plans:
 - [ ] TBD (run /gsd:plan-phase 7 to break down)
 
+### Phase 8: Format Conversion
+**Goal**: Users can convert generated JSONL output files into model-specific training formats (e.g., Mistral Instruct) using customizable templates
+
+**Depends on**: Phase 5
+
+**Requirements**: TBD during planning
+
+**Success Criteria** (what must be TRUE):
+  1. User runs `datakeg convert --template mistral-instruct <output>` and generated JSONL files are converted to the target format
+  2. Conversion templates define how completion, chat, and reasoning data maps to the target format (e.g., `<|user|>\n...\n<|assistant|>\n...`)
+  3. Users can create custom conversion templates for any model-specific format
+  4. Built-in templates ship embedded in the binary for common formats (Mistral Instruct, etc.)
+  5. Conversion works with all source formats (completion, chat, reasoning) where the template supports them
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 8 to break down)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -178,6 +198,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 5. Chat Format Support | 0/? | Not Started | — |
 | 6. Reasoning Format Support | 0/2 | Not Started | — |
 | 7. Claude Provider Support | 0/? | Not Started | — |
+| 8. Format Conversion | 0/? | Not Started | — |
 
 ---
 *Roadmap created: 2025-02-05*

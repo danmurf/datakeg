@@ -81,6 +81,7 @@ None.
 - Phase 5 added: Chat Format Support (chat-style messages/roles JSONL, new templates, --format flag)
 - Phase 6 added: Reasoning Format Support (chain-of-thought training data for reasoning models)
 - Phase 7 added: Claude Provider Support (Anthropic API provider via Claude subscription)
+- Phase 8 added: Format Conversion (convert generated JSONL to model-specific training formats via templates)
 
 ### Blockers/Concerns
 
@@ -88,10 +89,10 @@ None
 
 ## Session Continuity
 
-Last session: 2026-02-07 (phase 7 added)
-Stopped at: Added Phase 7 to roadmap, not yet planned
+Last session: 2026-02-07 (phase 8 added)
+Stopped at: Added Phase 8 to roadmap, not yet planned
 Resume file: None
 
 ---
 *State initialized: 2025-02-05*
-*Last updated: 2026-02-07 (Phase 7 added)*
+*Last updated: 2026-02-07 (Phase 8 added)*
