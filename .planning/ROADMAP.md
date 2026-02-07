@@ -160,10 +160,11 @@ Plans:
   4. Built-in templates ship embedded in the binary for common formats (Mistral Instruct, etc.)
   5. Conversion works with all source formats (completion, chat, reasoning) where the template supports them
 
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 7 to break down)
+- [ ] 07-01-PLAN.md — Converter package, conversion templates, template loader with jsonEscape
+- [ ] 07-02-PLAN.md — CLI convert command, flag registration, end-to-end wiring
 
 ### Phase 8: Claude Provider Support
 **Goal**: Users can generate training data using their Anthropic API key / Claude subscription, leveraging the provider abstraction from Phase 4
@@ -197,9 +198,9 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 4. Multi-Provider Support | 0/3 | Not Started | — |
 | 5. Chat Format Support | 0/? | Not Started | — |
 | 6. Reasoning Format Support | 0/2 | Not Started | — |
-| 7. Format Conversion | 0/? | Not Started | — |
+| 7. Format Conversion | 0/2 | Not Started | — |
 | 8. Claude Provider Support | 0/? | Not Started | — |
 
 ---
 *Roadmap created: 2025-02-05*
-*Last updated: 2026-02-07 (Phase 6 planned)*
+*Last updated: 2026-02-07 (Phase 7 planned)*
