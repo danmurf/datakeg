@@ -119,10 +119,11 @@ Plans:
   4. Deduplication and exclusion logic works correctly with the chat message format
   5. Per-document files, merge, and all existing features work with both formats
 
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 5 to break down)
+- [ ] 05-01-PLAN.md — FormatType enum, chat templates, format-aware generator (template selection + chat response parsing)
+- [ ] 05-02-PLAN.md — CLI flags (--format, --system-message), chat JSONL writer, pipeline wiring (generate + merge)
 
 ### Phase 6: Reasoning Format Support
 **Goal**: Users can generate chain-of-thought training data for reasoning models, with step-by-step reasoning traces in the output
