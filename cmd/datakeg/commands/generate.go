@@ -27,6 +27,8 @@ func ExecuteGeneratePipeline(
 	outputDir string,
 	providerType string,
 	model string,
+	format string,
+	systemMessage string,
 	pairsPer1K float64,
 	validPct float64,
 	testPct float64,
@@ -49,6 +51,12 @@ func ExecuteGeneratePipeline(
 		return fmt.Errorf("no markdown (.md) or text (.txt) files found in %s. Add some documentation files to the source directory and try again", sourceDir)
 	}
 
+	// Validate format
+	parsedFormat, err := generator.ParseFormat(format)
+	if err != nil {
+		return err
+	}
+
 	// Validate model for OpenRouter
 	if providerType == string(provider.ProviderOpenRouter) && model == "" {
 		return fmt.Errorf("openrouter requires an explicit model selection. Use --model to specify a model (e.g., --model meta-llama/llama-3.1-70b-instruct). Run 'datakeg list-providers' to see available models")
@@ -68,6 +76,7 @@ func ExecuteGeneratePipeline(
 		ValidPercent:    validPct * 100,
 		TestPercent:     testPct * 100,
 		Model:           model,
+		Format:          parsedFormat,
 	}
 	gen := generator.NewGenerator(p, genConfig)
 
@@ -100,9 +109,9 @@ func ExecuteGeneratePipeline(
 	// Step 5: Process documents and collect pairs sequentially with cross-split exclusion
 	// Train → Valid (exclude train) → Test (exclude train+valid)
 	// Per-document pairs reset between documents (no cross-document dedup)
-	var trainPairs []writer.TrainingPair
-	var validPairs []writer.TrainingPair
-	var testPairs []writer.TrainingPair
+	var trainPairs []generator.Pair
+	var validPairs []generator.Pair
+	var testPairs []generator.Pair
 
 	// Track usage for paid providers
 	usageTracker := &usage.Tracker{}
@@ -139,18 +148,10 @@ func ExecuteGeneratePipeline(
 			usageTracker.Add(usage)
 			fmt.Printf("     → Train: %d pairs generated\n", len(pairs))
 
-			// Convert and append to global train slice
-			for _, p := range pairs {
-				trainPairs = append(trainPairs, writer.TrainingPair{
-					Prompt:     p.Prompt,
-					Completion: p.Completion,
-				})
-			}
-
-			// Write per-document train file
+			// Append to global train slice
 			if len(pairs) > 0 {
 				perDocFile := sanitizeDocName(doc, outputDir, "train")
-				if err := writer.WriteJSONL(perDocFile, convertPairs(pairs)); err != nil {
+				if err := writePairsForFormat(perDocFile, pairs, parsedFormat, systemMessage); err != nil {
 					cancel()
 					return fmt.Errorf("failed to write %s. Check disk space and write permissions", filepath.Base(perDocFile))
 				}
@@ -170,18 +171,13 @@ func ExecuteGeneratePipeline(
 			usageTracker.Add(usage)
 			fmt.Printf("     → Valid: %d pairs generated\n", len(pairs))
 
-			// Convert and append to global valid slice
-			for _, p := range pairs {
-				validPairs = append(validPairs, writer.TrainingPair{
-					Prompt:     p.Prompt,
-					Completion: p.Completion,
-				})
-			}
+			// Append to global valid slice
+			validPairs = append(validPairs, pairs...)
 
 			// Write per-document valid file
 			if len(pairs) > 0 {
 				perDocFile := sanitizeDocName(doc, outputDir, "valid")
-				if err := writer.WriteJSONL(perDocFile, convertPairs(pairs)); err != nil {
+				if err := writePairsForFormat(perDocFile, pairs, parsedFormat, systemMessage); err != nil {
 					cancel()
 					return fmt.Errorf("failed to write %s. Check disk space and write permissions", filepath.Base(perDocFile))
 				}
@@ -202,18 +198,13 @@ func ExecuteGeneratePipeline(
 			usageTracker.Add(usage)
 			fmt.Printf("     → Test: %d pairs generated\n", len(pairs))
 
-			// Convert and append to global test slice
-			for _, p := range pairs {
-				testPairs = append(testPairs, writer.TrainingPair{
-					Prompt:     p.Prompt,
-					Completion: p.Completion,
-				})
-			}
+			// Append to global test slice
+			testPairs = append(testPairs, pairs...)
 
 			// Write per-document test file
 			if len(pairs) > 0 {
 				perDocFile := sanitizeDocName(doc, outputDir, "test")
-				if err := writer.WriteJSONL(perDocFile, convertPairs(pairs)); err != nil {
+				if err := writePairsForFormat(perDocFile, pairs, parsedFormat, systemMessage); err != nil {
 					cancel()
 					return fmt.Errorf("failed to write %s. Check disk space and write permissions", filepath.Base(perDocFile))
 				}
@@ -236,7 +227,7 @@ func ExecuteGeneratePipeline(
 
 	if len(trainPairs) > 0 {
 		outFile := filepath.Join(outputDir, "train.jsonl")
-		if err := writer.WriteJSONL(outFile, trainPairs); err != nil {
+		if err := writePairsForFormat(outFile, trainPairs, parsedFormat, systemMessage); err != nil {
 			return fmt.Errorf("failed to write train.jsonl. Check disk space and write permissions")
 		}
 		fmt.Printf("  Written %d pairs to train.jsonl\n", len(trainPairs))
@@ -244,7 +235,7 @@ func ExecuteGeneratePipeline(
 
 	if len(validPairs) > 0 {
 		outFile := filepath.Join(outputDir, "valid.jsonl")
-		if err := writer.WriteJSONL(outFile, validPairs); err != nil {
+		if err := writePairsForFormat(outFile, validPairs, parsedFormat, systemMessage); err != nil {
 			return fmt.Errorf("failed to write valid.jsonl. Check disk space and write permissions")
 		}
 		fmt.Printf("  Written %d pairs to valid.jsonl\n", len(validPairs))
@@ -252,7 +243,7 @@ func ExecuteGeneratePipeline(
 
 	if len(testPairs) > 0 {
 		outFile := filepath.Join(outputDir, "test.jsonl")
-		if err := writer.WriteJSONL(outFile, testPairs); err != nil {
+		if err := writePairsForFormat(outFile, testPairs, parsedFormat, systemMessage); err != nil {
 			return fmt.Errorf("failed to write test.jsonl. Check disk space and write permissions")
 		}
 		fmt.Printf("  Written %d pairs to test.jsonl\n", len(testPairs))
@@ -292,6 +283,20 @@ func convertPairs(pairs []generator.Pair) []writer.TrainingPair {
 		}
 	}
 	return result
+}
+
+// writePairsForFormat writes pairs in the specified format (completion or chat).
+func writePairsForFormat(filename string, pairs []generator.Pair, format generator.FormatType, systemMessage string) error {
+	switch format {
+	case generator.FormatChat:
+		var messages []writer.ChatMessage
+		for _, p := range pairs {
+			messages = append(messages, writer.ConvertPairToChatMessage(p.Prompt, p.Completion, systemMessage))
+		}
+		return writer.WriteChatJSONL(filename, messages)
+	default:
+		return writer.WriteJSONL(filename, convertPairs(pairs))
+	}
 }
 
 // countPerDocFiles counts the number of per-document JSONL files in the output directory.

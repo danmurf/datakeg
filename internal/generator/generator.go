@@ -22,12 +22,33 @@ const (
 	SplitTest  SplitType = "test"
 )
 
+// FormatType represents the output format for training data.
+type FormatType string
+
+const (
+	FormatCompletion FormatType = "completion"
+	FormatChat       FormatType = "chat"
+)
+
+// ParseFormat validates and returns a FormatType from string input.
+func ParseFormat(s string) (FormatType, error) {
+	switch s {
+	case string(FormatCompletion):
+		return FormatCompletion, nil
+	case string(FormatChat):
+		return FormatChat, nil
+	default:
+		return "", fmt.Errorf("invalid format: %s (must be 'completion' or 'chat')", s)
+	}
+}
+
 // Config holds configuration for pair generation.
 type Config struct {
-	PairsPer1KChars float64 // Number of pairs to generate per 1000 characters
-	ValidPercent    float64 // Percentage of pairs for validation
-	TestPercent     float64 // Percentage of pairs for testing
-	Model           string  // Ollama model to use
+	PairsPer1KChars float64
+	ValidPercent    float64
+	TestPercent     float64
+	Model           string
+	Format          FormatType
 }
 
 // DefaultConfig returns a sensible default configuration.
@@ -37,6 +58,7 @@ func DefaultConfig() Config {
 		ValidPercent:    10.0,
 		TestPercent:     10.0,
 		Model:           "gpt-oss:20b",
+		Format:          FormatCompletion,
 	}
 }
 
@@ -93,7 +115,7 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 	}
 
 	// Get the correct template for this split type
-	templateName := g.getTemplateName(split)
+	templateName := g.getTemplateName(g.config.Format, split)
 
 	// Convert generator.Pair to templates.ExcludePair for template rendering
 	var excludeTemplatePairs []templates.ExcludePair
@@ -132,8 +154,13 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 		totalUsage.EstimatedCost += usage.EstimatedCost
 	}
 
-	// Parse the response into pairs
-	rawPairs := g.parseResponse(response)
+	// Parse the response into pairs based on format
+	var rawPairs []Pair
+	if g.config.Format == FormatChat {
+		rawPairs = g.parseChatResponse(response)
+	} else {
+		rawPairs = g.parseResponse(response)
+	}
 
 	// Validate all pairs - discard invalid ones
 	var validPairs []Pair
@@ -181,7 +208,7 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 			ExcludePairs:    newExcludeTemplatePairs,
 		}
 
-		backfillPrompt, err := templates.ExecuteTemplate(templateName, backfillPromptData)
+		backfillPrompt, err := templates.ExecuteTemplate(g.getTemplateName(g.config.Format, split), backfillPromptData)
 		if err != nil {
 			// Log error but continue with what we have
 			fmt.Fprintf(os.Stderr, "Warning: template execution failed for backfill attempt %d: %v\n", attempt+1, err)
@@ -204,8 +231,13 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 			totalUsage.EstimatedCost += backfillUsage.EstimatedCost
 		}
 
-		// Parse backfill response
-		backfillPairs := g.parseResponse(backfillResponse)
+		// Parse backfill response based on format
+		var backfillPairs []Pair
+		if g.config.Format == FormatChat {
+			backfillPairs = g.parseChatResponse(backfillResponse)
+		} else {
+			backfillPairs = g.parseResponse(backfillResponse)
+		}
 
 		// Validate backfill pairs
 		var validBackfillPairs []Pair
@@ -309,18 +341,38 @@ func (g *Generator) CalculateSplitCounts(total int) SplitCounts {
 	}
 }
 
-// getTemplateName returns the template file name for the given split type.
-func (g *Generator) getTemplateName(split SplitType) string {
-	switch split {
-	case SplitTrain:
-		return "train.tmpl"
-	case SplitValid:
-		return "valid.tmpl"
-	case SplitTest:
-		return "test.tmpl"
+// getTemplateName returns the template file name for the given format and split type.
+func (g *Generator) getTemplateName(format FormatType, split SplitType) string {
+	switch format {
+	case FormatChat:
+		switch split {
+		case SplitTrain:
+			return "chat_train.tmpl"
+		case SplitValid:
+			return "chat_valid.tmpl"
+		case SplitTest:
+			return "chat_test.tmpl"
+		default:
+			return "chat_train.tmpl"
+		}
 	default:
-		return "train.tmpl"
+		switch split {
+		case SplitTrain:
+			return "train.tmpl"
+		case SplitValid:
+			return "valid.tmpl"
+		case SplitTest:
+			return "test.tmpl"
+		default:
+			return "train.tmpl"
+		}
 	}
+}
+
+// chatPair represents a single chat turn in LLM response.
+type chatPair struct {
+	User      string `json:"user"`
+	Assistant string `json:"assistant"`
 }
 
 func (g *Generator) parseResponse(response string) []Pair {
@@ -356,6 +408,53 @@ func (g *Generator) parseResponse(response string) []Pair {
 	}
 
 	return pairs
+}
+
+// parseChatResponse parses LLM responses in chat format into Pair structs.
+// Expected format: [{"user": "question", "assistant": "answer"}, ...]
+func (g *Generator) parseChatResponse(response string) []Pair {
+	var chatPairs []chatPair
+
+	if len(strings.TrimSpace(response)) == 0 {
+		return nil
+	}
+
+	start := strings.Index(response, "[")
+	end := strings.LastIndex(response, "]")
+
+	if start != -1 && end != -1 && end > start {
+		jsonStr := response[start : end+1]
+
+		if err := json.Unmarshal([]byte(jsonStr), &chatPairs); err != nil {
+			var raw interface{}
+			if err2 := json.Unmarshal([]byte(jsonStr), &raw); err2 == nil {
+				if str, ok := raw.(string); ok {
+					if innerPairs, err3 := parseChatJSONString(str); err3 == nil {
+						chatPairs = innerPairs
+					}
+				}
+			}
+		}
+	}
+
+	var pairs []Pair
+	for _, cp := range chatPairs {
+		pairs = append(pairs, Pair{
+			Prompt:     cp.User,
+			Completion: cp.Assistant,
+		})
+	}
+
+	return pairs
+}
+
+// parseChatJSONString parses a string containing a JSON array of chatPair objects.
+func parseChatJSONString(s string) ([]chatPair, error) {
+	var pairs []chatPair
+	if err := json.Unmarshal([]byte(s), &pairs); err != nil {
+		return nil, err
+	}
+	return pairs, nil
 }
 
 // parseJSONArrayString parses a string that contains a JSON array

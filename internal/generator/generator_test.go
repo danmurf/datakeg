@@ -259,7 +259,7 @@ func TestGenerator_getTemplateName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewGenerator(nil, DefaultConfig())
-			got := g.getTemplateName(tt.splitType)
+			got := g.getTemplateName(FormatCompletion, tt.splitType)
 			if got != tt.want {
 				t.Errorf("getTemplateName() = %v, want %v", got, tt.want)
 			}
@@ -388,6 +388,222 @@ func TestGenerator_parseResponse(t *testing.T) {
 	}
 }
 
+func TestParseFormat(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    FormatType
+		wantErr bool
+	}{
+		{
+			name:    "valid completion format",
+			input:   "completion",
+			want:    FormatCompletion,
+			wantErr: false,
+		},
+		{
+			name:    "valid chat format",
+			input:   "chat",
+			want:    FormatChat,
+			wantErr: false,
+		},
+		{
+			name:    "invalid format",
+			input:   "json",
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "empty string",
+			input:   "",
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "unknown format",
+			input:   "text",
+			want:    "",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseFormat(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseFormat() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ParseFormat() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetTemplateName_FormatAware(t *testing.T) {
+	tests := []struct {
+		name      string
+		format    FormatType
+		splitType SplitType
+		want      string
+	}{
+		{
+			name:      "completion train",
+			format:    FormatCompletion,
+			splitType: SplitTrain,
+			want:      "train.tmpl",
+		},
+		{
+			name:      "completion valid",
+			format:    FormatCompletion,
+			splitType: SplitValid,
+			want:      "valid.tmpl",
+		},
+		{
+			name:      "completion test",
+			format:    FormatCompletion,
+			splitType: SplitTest,
+			want:      "test.tmpl",
+		},
+		{
+			name:      "chat train",
+			format:    FormatChat,
+			splitType: SplitTrain,
+			want:      "chat_train.tmpl",
+		},
+		{
+			name:      "chat valid",
+			format:    FormatChat,
+			splitType: SplitValid,
+			want:      "chat_valid.tmpl",
+		},
+		{
+			name:      "chat test",
+			format:    FormatChat,
+			splitType: SplitTest,
+			want:      "chat_test.tmpl",
+		},
+		{
+			name:      "unknown format defaults to completion train",
+			format:    FormatType("unknown"),
+			splitType: SplitTrain,
+			want:      "train.tmpl",
+		},
+		{
+			name:      "unknown split defaults to chat_train",
+			format:    FormatChat,
+			splitType: SplitType("unknown"),
+			want:      "chat_train.tmpl",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewGenerator(nil, DefaultConfig())
+			g.config.Format = tt.format
+			got := g.getTemplateName(tt.format, tt.splitType)
+			if got != tt.want {
+				t.Errorf("getTemplateName() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGenerator_parseChatResponse(t *testing.T) {
+	tests := []struct {
+		name     string
+		response string
+		want     []Pair
+	}{
+		{
+			name:     "valid single chat pair",
+			response: `[{"user": "What is Go?", "assistant": "A programming language."}]`,
+			want: []Pair{
+				{Prompt: "What is Go?", Completion: "A programming language."},
+			},
+		},
+		{
+			name: "valid multiple chat pairs",
+			response: `[
+				{"user": "Q1", "assistant": "A1"},
+				{"user": "Q2", "assistant": "A2"}
+			]`,
+			want: []Pair{
+				{Prompt: "Q1", Completion: "A1"},
+				{Prompt: "Q2", Completion: "A2"},
+			},
+		},
+		{
+			name:     "response with extra text before JSON",
+			response: `Here are the pairs:\n[{"user": "Q", "assistant": "A"}]`,
+			want: []Pair{
+				{Prompt: "Q", Completion: "A"},
+			},
+		},
+		{
+			name:     "response with extra text after JSON",
+			response: `[{"user": "Q", "assistant": "A"}]\nThese are good pairs.`,
+			want: []Pair{
+				{Prompt: "Q", Completion: "A"},
+			},
+		},
+		{
+			name:     "empty response",
+			response: "",
+			want:     []Pair{},
+		},
+		{
+			name:     "whitespace only",
+			response: "   \n\t  ",
+			want:     []Pair{},
+		},
+		{
+			name:     "no JSON array",
+			response: "Just some text without JSON",
+			want:     []Pair{},
+		},
+		{
+			name:     "malformed JSON",
+			response: `[{"user": "Q", "assistant": }]`,
+			want:     []Pair{},
+		},
+		{
+			name:     "empty array",
+			response: `[]`,
+			want:     []Pair{},
+		},
+		{
+			name:     "JSON with escaped quotes",
+			response: `[{"user": "What's \"Go\"?", "assistant": "It's a language."}]`,
+			want: []Pair{
+				{Prompt: `What's "Go"?`, Completion: "It's a language."},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewGenerator(nil, DefaultConfig())
+			got := g.parseChatResponse(tt.response)
+
+			if len(got) != len(tt.want) {
+				t.Errorf("parseChatResponse() returned %d pairs, want %d", len(got), len(tt.want))
+				return
+			}
+
+			for i := range got {
+				if got[i].Prompt != tt.want[i].Prompt {
+					t.Errorf("pair[%d].Prompt = %q, want %q", i, got[i].Prompt, tt.want[i].Prompt)
+				}
+				if got[i].Completion != tt.want[i].Completion {
+					t.Errorf("pair[%d].Completion = %q, want %q", i, got[i].Completion, tt.want[i].Completion)
+				}
+			}
+		})
+	}
+}
+
 func TestDefaultConfig(t *testing.T) {
 	config := DefaultConfig()
 
@@ -400,6 +616,7 @@ func TestDefaultConfig(t *testing.T) {
 		{"ValidPercent", config.ValidPercent, 10.0},
 		{"TestPercent", config.TestPercent, 10.0},
 		{"Model", config.Model, "gpt-oss:20b"},
+		{"Format", config.Format, FormatCompletion},
 	}
 
 	for _, tt := range tests {

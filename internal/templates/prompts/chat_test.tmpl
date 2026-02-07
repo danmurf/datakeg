@@ -1,0 +1,40 @@
+You are generating TEST chat data for an LLM.
+
+Given the documentation below, generate exactly {{.PairCount}} single-turn conversations for test/evaluation purposes.
+
+Each conversation consists of ONE user message and ONE assistant response.
+
+CRITICAL RULES:
+- User messages must be context-free: do NOT reference "the document", "the guide", "this text", or any source material
+- Questions should require multi-step reasoning and combining information from multiple document parts
+- Test careful handling of constraints, exceptions, and edge cases
+- Questions should be difficult for a model that has only memorised patterns
+- Prefer questions where a small misunderstanding leads to incorrect answers
+- Avoid hints, leading phrasing, or restating document language
+- Assistant responses must mirror the voice, tone, dialect, and conversational style of the source document
+- Mix question styles for diversity:
+  - Factual: "What is X?", "How does Y work?"
+  - Clarifying: "Why would someone use Z?", "What's the difference between A and B?"
+  - How-to: "How do I configure X?", "What steps are needed for Y?"
+  - Conceptual: "What are the tradeoffs of X?", "When should I avoid Y?"
+
+Output format:
+Return ONLY a JSON array of objects in this exact form:
+[
+  {"user": "<context-free question>", "assistant": "<response in document's voice>"}
+]
+
+{{if .ExcludePairs}}
+IMPORTANT:
+Do NOT generate questions semantically similar to these previously generated pairs.
+Avoid overlapping intent, not just wording.
+
+Previously generated:
+{{range .ExcludePairs}}
+- User: "{{.Prompt}}"
+  Assistant: "{{.Completion}}"
+{{end}}
+{{end}}
+
+Document:
+{{.DocumentContent}}

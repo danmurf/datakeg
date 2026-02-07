@@ -30,16 +30,18 @@ train/valid/test JSONL files.`,
 
 // Configuration flags for the generate command.
 var (
-	flagProvider   string
-	flagModel      string
-	flagTrainPct   float64
-	flagValidPct   float64
-	flagTestPct    float64
-	flagPairsPer1K float64
-	flagTimeout    int
-	flagSkipMerge  bool
-	flagYes        bool
-	flagDryRun     bool
+	flagProvider      string
+	flagModel         string
+	flagFormat        string
+	flagSystemMessage string
+	flagTrainPct      float64
+	flagValidPct      float64
+	flagTestPct       float64
+	flagPairsPer1K    float64
+	flagTimeout       int
+	flagSkipMerge     bool
+	flagYes           bool
+	flagDryRun        bool
 )
 
 var generateCmd = &cobra.Command{
@@ -96,6 +98,8 @@ func init() {
 	generateCmd.Flags().BoolVarP(&flagSkipMerge, "skip-merge", "", false, "Skip merging per-document files into master files")
 	generateCmd.Flags().BoolVarP(&flagYes, "yes", "y", false, "Skip confirmation prompts (auto-confirm cost estimates)")
 	generateCmd.Flags().BoolVarP(&flagDryRun, "dry-run", "", false, "Print cost estimate and exit without generating")
+	generateCmd.Flags().StringVarP(&flagFormat, "format", "f", "completion", "Output format (completion, chat)")
+	generateCmd.Flags().StringVarP(&flagSystemMessage, "system-message", "", "", "System message to include in chat format output")
 
 	RootCmd.AddCommand(generateCmd)
 	RootCmd.AddCommand(versionCmd)
@@ -112,10 +116,14 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  Output:   %s\n", outputPath)
 	fmt.Printf("  Provider: %s\n", flagProvider)
 	fmt.Printf("  Model:    %s\n", flagModel)
+	fmt.Printf("  Format:   %s\n", flagFormat)
+	if flagFormat == "chat" && flagSystemMessage != "" {
+		fmt.Printf("  System Message: %s\n", flagSystemMessage)
+	}
 	fmt.Printf("  Splits:   train=%.0f%%, valid=%.0f%%, test=%.0f%%\n", flagTrainPct*100, flagValidPct*100, flagTestPct*100)
 	fmt.Printf("  Pairs per 1K chars: %.1f\n", flagPairsPer1K)
 
-	return commands.ExecuteGeneratePipeline(sourcePath, outputPath, flagProvider, flagModel, flagPairsPer1K, flagValidPct, flagTestPct, flagTimeout, flagSkipMerge, flagYes, flagDryRun)
+	return commands.ExecuteGeneratePipeline(sourcePath, outputPath, flagProvider, flagModel, flagFormat, flagSystemMessage, flagPairsPer1K, flagValidPct, flagTestPct, flagTimeout, flagSkipMerge, flagYes, flagDryRun)
 }
 
 func runMerge(cmd *cobra.Command, args []string) error {

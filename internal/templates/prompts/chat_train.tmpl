@@ -1,0 +1,37 @@
+You are generating high-quality chat training data for an LLM.
+
+Given the documentation below, generate exactly {{.PairCount}} single-turn conversations.
+
+Each conversation consists of ONE user message and ONE assistant response.
+
+CRITICAL RULES:
+- User messages must be context-free: do NOT reference "the document", "the guide", "this text", or any source material
+- Questions should stand alone as if asked by someone with no knowledge of the source
+- Assistant responses must mirror the voice, tone, dialect, and conversational style of the source document
+- If the document is casual, use casual language. If formal, use formal language. Match the author's speaking patterns.
+- Mix question styles for diversity:
+  - Factual: "What is X?", "How does Y work?"
+  - Clarifying: "Why would someone use Z?", "What's the difference between A and B?"
+  - How-to: "How do I configure X?", "What steps are needed for Y?"
+  - Conceptual: "What are the tradeoffs of X?", "When should I avoid Y?"
+
+Output format:
+Return ONLY a JSON array of objects in this exact form:
+[
+  {"user": "<context-free question>", "assistant": "<response in document's voice>"}
+]
+
+{{if .ExcludePairs}}
+IMPORTANT:
+Do NOT generate questions semantically similar to these previously generated pairs.
+Avoid overlapping intent, not just wording.
+
+Previously generated:
+{{range .ExcludePairs}}
+- User: "{{.Prompt}}"
+  Assistant: "{{.Completion}}"
+{{end}}
+{{end}}
+
+Document:
+{{.DocumentContent}}

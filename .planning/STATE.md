@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-05)
 
 **Core value:** Transform documentation into high-quality, deduplicated training data with minimal manual effort.
-**Current focus:** Phase 4: Multi-Provider Support
+**Current focus:** Phase 5: Chat Format Support
 
 ## Current Position
 
-Phase: 4 of 7 (Multi-Provider Support)
-Plan: 03 of 03 in current phase
+Phase: 5 of 7 (Chat Format Support)
+Plan: 02 of 02 in current phase
 Status: **Phase Complete**
-Last activity: 2026-02-07 — Completed Plan 04-03, Phase 4 finished
+Last activity: 2026-02-07 — Completed Plan 05-02, Phase 5 finished
 
-Progress: [████████░░] 57% (Phase 4 complete: 4/7 phases done)
+Progress: [█████████░] 71% (Phase 5 complete: 5/7 phases done)
 
 ## Performance Metrics
 
@@ -44,7 +44,6 @@ Progress: [████████░░] 57% (Phase 4 complete: 4/7 phases don
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
 - Fixed Ollama client by removing JSON schema format that was causing empty responses
@@ -63,6 +62,14 @@ Recent decisions affecting current work:
 - All file write errors include disk space and permissions checks
 - Ollama connection errors include troubleshooting steps (ollama serve, ollama pull)
 - Merge errors guide users to run `datakeg generate --skip-merge` first
+- Phase 5: Added FormatType enum with "completion" and "chat" values
+- Phase 5: Chat templates instruct LLM for context-free user messages and style-matching assistant responses
+- Phase 5: Generator selects correct template based on format type and split type
+- Phase 5: Generator parses chat-format LLM responses (user/assistant JSON) into Pair structs
+- Phase 5: ChatMessage struct with Messages []Message for OpenAI-compatible output
+- Phase 5: --format flag defaults to "completion" for backward compatibility
+- Phase 5: --system-message adds optional system message at position 0 in chat messages
+- Phase 5: Merge is format-agnostic (raw line concatenation) for both formats
 
 ### Pending Todos
 

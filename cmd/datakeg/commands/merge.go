@@ -1,18 +1,17 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/danmurf/datakeg/internal/writer"
 )
 
 // ExecuteMergePipeline merges per-document JSONL files into master train/valid/test files.
 // It scans the output directory for files matching {name}_{split}.jsonl pattern,
-// collects all pairs, and writes consolidated master files.
+// collects all lines, and writes consolidated master files.
+// This merge is format-agnostic - it concatenates lines as-is without parsing,
+// allowing it to work with both completion format and chat format files.
 func ExecuteMergePipeline(outputDir string) error {
 	// Verify output directory exists
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
@@ -51,18 +50,18 @@ func ExecuteMergePipeline(outputDir string) error {
 		countFiles(outputDir, "valid"),
 		countFiles(outputDir, "test"))
 
-	// Process each split type
+	// Process each split type using raw line concatenation (format-agnostic)
 	for _, split := range splits {
-		pairs, filesProcessed := mergeSplitFiles(outputDir, split)
-		totalPairsBySplit[split] = len(pairs)
+		lines, filesProcessed := mergeSplitFilesRaw(outputDir, split)
+		totalPairsBySplit[split] = lines
 
-		if len(pairs) > 0 {
+		if lines > 0 {
 			// Write master file for this split
 			masterFile := filepath.Join(outputDir, split+".jsonl")
-			if err := writer.WriteJSONL(masterFile, pairs); err != nil {
+			if err := writeLinesToFile(masterFile, outputDir, split); err != nil {
 				return fmt.Errorf("could not write %s.jsonl. Check disk space and write permissions", split)
 			}
-			fmt.Printf("  Merged %d pairs from %d files into %s.jsonl\n", len(pairs), filesProcessed, split)
+			fmt.Printf("  Merged %d pairs from %d files into %s.jsonl\n", lines, filesProcessed, split)
 		} else {
 			fmt.Printf("  No pairs found for %s split (no master file created)\n", split)
 		}
@@ -77,19 +76,18 @@ func ExecuteMergePipeline(outputDir string) error {
 	return nil
 }
 
-// mergeSplitFiles finds all per-document files for a given split and merges them.
-func mergeSplitFiles(outputDir string, split string) ([]writer.TrainingPair, int) {
+// mergeSplitFilesRaw finds all per-document files for a given split and merges them using raw line concatenation.
+func mergeSplitFilesRaw(outputDir string, split string) (int, int) {
 	pattern := "*_" + split + ".jsonl"
 
-	// Find all matching files
 	matches, err := filepath.Glob(filepath.Join(outputDir, pattern))
 	if err != nil {
 		fmt.Printf("  Error searching for %s files: %v\n", split, err)
-		return nil, 0
+		return 0, 0
 	}
 
-	var allPairs []writer.TrainingPair
 	filesProcessed := 0
+	lineCount := 0
 
 	// Count files to report
 	for _, filePath := range matches {
@@ -110,47 +108,63 @@ func mergeSplitFiles(outputDir string, split string) ([]writer.TrainingPair, int
 			continue // This is a master file like train.jsonl, skip it
 		}
 
-		// Read pairs from this file
-		pairs, err := readJSONLFile(filePath)
+		// Read file and count lines
+		data, err := os.ReadFile(filePath)
 		if err != nil {
 			fmt.Printf("  Warning: could not read %s: %v\nThe file may be corrupted or permissions are incorrect.\n", fileName, err)
 			continue
 		}
 
-		if len(pairs) > 0 {
-			allPairs = append(allPairs, pairs...)
+		lines := strings.Split(string(data), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line != "" {
+				lineCount++
+			}
 		}
 	}
 
-	return allPairs, filesProcessed
+	return lineCount, filesProcessed
 }
 
-// readJSONLFile reads a JSONL file and returns all TrainingPair objects.
-func readJSONLFile(filePath string) ([]writer.TrainingPair, error) {
-	data, err := os.ReadFile(filePath)
+// writeLinesToFile writes all lines from per-document files to a master file.
+func writeLinesToFile(masterFile string, outputDir string, split string) error {
+	pattern := "*_" + split + ".jsonl"
+	matches, _ := filepath.Glob(filepath.Join(outputDir, pattern))
+
+	file, err := os.Create(masterFile)
 	if err != nil {
-		return nil, fmt.Errorf("could not read %s. The file may be corrupted or permissions are incorrect", filepath.Base(filePath))
+		return fmt.Errorf("create file %s: %w", masterFile, err)
 	}
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("close file %s: %w", masterFile, closeErr)
+		}
+	}()
 
-	// Parse each line as JSON
-	lines := strings.Split(string(data), "\n")
-	var pairs []writer.TrainingPair
-
-	for i, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue // Skip empty lines
+	for _, filePath := range matches {
+		fileName := filepath.Base(filePath)
+		if strings.HasPrefix(fileName, split+".") {
+			continue // Skip master files
 		}
 
-		var pair writer.TrainingPair
-		if err := json.Unmarshal([]byte(line), &pair); err != nil {
-			return nil, fmt.Errorf("parse line %d: %w", i+1, err)
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			return fmt.Errorf("read file %s: %w", fileName, err)
 		}
 
-		pairs = append(pairs, pair)
+		lines := strings.Split(string(data), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line != "" {
+				if _, err := file.WriteString(line + "\n"); err != nil {
+					return fmt.Errorf("write line to %s: %w", masterFile, err)
+				}
+			}
+		}
 	}
 
-	return pairs, nil
+	return nil
 }
 
 // countFiles counts per-document JSONL files for a given split type.
