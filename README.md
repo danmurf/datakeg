@@ -5,16 +5,20 @@
 <h1 align="center">DataKeg</h1>
 
 <p align="center">
-  <a href="https://github.com/danmurf/dataKeg/actions/workflows/ci.yml">
-    <img src="https://github.com/danmurf/dataKeg/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI Status" />
-  </a>
-</p>
-
-<p align="center">
   A command-line tool that transforms raw documentation into LLM training datasets.
 </p>
 
----
+<div style="display: flex; gap: 20px; justify-content: center; align-items: center;">
+  <a href="https://github.com/danmurf/dataKeg/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/danmurf/dataKeg/ci.yml/lint?label=Lint" alt="Lint" />
+  </a>
+  <a href="https://github.com/danmurf/dataKeg/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/danmurf/dataKeg/ci.yml/test?label=Test" alt="Test" />
+  </a>
+  <a href="https://github.com/danmurf/dataKeg/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/danmurf/dataKeg/ci.yml/build?label=Build" alt="Build" />
+  </a>
+</div>
 
 ## Overview
 
@@ -27,22 +31,6 @@ dataKeg processes markdown and text files from a source directory, generates que
 - Automatic train/validation/test split generation
 - Configurable pair density per document
 - JSONL output format compatible with popular ML frameworks
-
-## CI Pipeline
-
-<p align="center">
-  <a href="https://github.com/danmurf/dataKeg/actions/workflows/ci.yml">
-    <img src="https://github.com/danmurf/dataKeg/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI Status" />
-  </a>
-</p>
-
-The project uses GitHub Actions for continuous integration with three jobs:
-
-| Job | Status | Description |
-|-----|--------|-------------|
-| **Lint** | ![Lint](https://github.com/danmurf/dataKeg/actions/workflows/ci.yml/badge.svg?job=lint) | Code quality checks with golangci-lint |
-| **Test** | ![Test](https://github.com/danmurf/dataKeg/actions/workflows/ci.yml/badge.svg?job=test) | Unit tests with coverage reporting |
-| **Build** | ![Build](https://github.com/danmurf/dataKeg/actions/workflows/ci.yml/badge.svg?job=build) | Binary compilation and verification |
 
 ## Prerequisites
 
