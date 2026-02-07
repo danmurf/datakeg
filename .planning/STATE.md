@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-05)
 
 **Core value:** Transform documentation into high-quality, deduplicated training data with minimal manual effort.
-**Current focus:** Phase 3: Production-Ready
+**Current focus:** Phase 4: Multi-Provider Support
 
 ## Current Position
 
-Phase: 3 of 3 (Production-Ready)
-Plan: 3 of 3 in current phase
-Status: Phase 3 complete - all requirements verified
-Last activity: 2026-02-06 — Completed 03-03-PLAN.md with error message improvements
+Phase: 4 of 7 (Multi-Provider Support)
+Plan: 0 of ? in current phase
+Status: Phase added, not yet planned
+Last activity: 2026-02-07 — Added Phase 7: Claude Provider Support
 
-Progress: [██████████] 100% (All phases complete)
+Progress: [████░░░░░░] 43% (Phases 4-7 not started)
 
 ## Performance Metrics
 
@@ -68,16 +68,23 @@ Recent decisions affecting current work:
 
 None.
 
+### Roadmap Evolution
+
+- Phase 4 added: Multi-Provider Support (OpenRouter integration, provider abstraction, API key management)
+- Phase 5 added: Chat Format Support (chat-style messages/roles JSONL, new templates, --format flag)
+- Phase 6 added: Reasoning Format Support (chain-of-thought training data for reasoning models)
+- Phase 7 added: Claude Provider Support (Anthropic API provider via Claude subscription)
+
 ### Blockers/Concerns
 
-None - All phases complete
+None
 
 ## Session Continuity
 
-Last session: 2026-02-06 (plan 03-03 execution)
-Stopped at: Completed 03-03-PLAN.md with error message improvements
+Last session: 2026-02-07 (phase 7 added)
+Stopped at: Added Phase 7 to roadmap, not yet planned
 Resume file: None
 
 ---
 *State initialized: 2025-02-05*
-*Last updated: 2026-02-06 (Phase 3 complete)*
+*Last updated: 2026-02-07 (Phase 7 added)*

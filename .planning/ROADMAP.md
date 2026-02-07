@@ -15,6 +15,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: Core Pipeline** - End-to-end MVP from markdown to JSONL training data
 - [ ] **Phase 2: Smart Generation** - Exclusion logic, deduplication, and quality controls
 - [ ] **Phase 3: Production Ready** - Embedded templates, per-doc files, progress reporting
+- [ ] **Phase 4: Multi-Provider Support** - Provider abstraction, OpenRouter integration, API key management
+- [ ] **Phase 5: Chat Format Support** - Chat-style training data with messages/roles JSONL output
+- [ ] **Phase 6: Reasoning Format Support** - Chain-of-thought training data for reasoning models
+- [ ] **Phase 7: Claude Provider Support** - Anthropic API provider for generating data via Claude subscription
 
 ## Phase Details
 
@@ -80,17 +84,97 @@ Plans:
 - [x] 03-02-PLAN.md — Merge subcommand implementation
 - [x] 03-03-PLAN.md — UX improvements and error handling
 
+### Phase 4: Multi-Provider Support
+**Goal**: Users can choose between Ollama and OpenRouter (with any model) for pair generation, with secure API key storage
+
+**Depends on**: Phase 3
+
+**Requirements**: TBD during planning
+
+**Success Criteria** (what must be TRUE):
+  1. User runs `datakeg generate --provider openrouter --model <model> <source> <output>` and pairs are generated via OpenRouter API
+  2. User runs `datakeg generate --provider ollama --model <model>` to select any Ollama model (not just the default)
+  3. User can securely store and retrieve API keys per provider (not passed as plain CLI flags)
+  4. Generator is provider-agnostic — uses a common interface, not coupled to Ollama directly
+  5. Existing Ollama workflow continues to work as default with no breaking changes
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 4 to break down)
+
+### Phase 5: Chat Format Support
+**Goal**: Users can generate chat-style training data (messages with role/content) in addition to the existing prompt/completion format
+
+**Depends on**: Phase 4
+
+**Requirements**: TBD during planning
+
+**Success Criteria** (what must be TRUE):
+  1. User runs `datakeg generate --format chat <source> <output>` and receives JSONL files with `{"messages":[{"role":"user","content":"..."},{"role":"assistant","content":"..."}]}` format
+  2. Existing `--format completion` (default) continues to produce current prompt/completion JSONL unchanged
+  3. Chat-specific prompt templates instruct the LLM to generate multi-turn conversations from documentation
+  4. Deduplication and exclusion logic works correctly with the chat message format
+  5. Per-document files, merge, and all existing features work with both formats
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 5 to break down)
+
+### Phase 6: Reasoning Format Support
+**Goal**: Users can generate chain-of-thought training data for reasoning models, with step-by-step reasoning traces in the output
+
+**Depends on**: Phase 5
+
+**Requirements**: TBD during planning
+
+**Success Criteria** (what must be TRUE):
+  1. User runs `datakeg generate --format reasoning <source> <output>` and receives JSONL with structured reasoning traces (e.g. thinking/steps/answer fields)
+  2. Reasoning-specific prompt templates instruct the LLM to produce step-by-step problem solving from documentation
+  3. Output format is compatible with common reasoning model fine-tuning pipelines
+  4. Deduplication and exclusion logic works correctly with the reasoning format
+  5. All existing features (per-doc files, merge, skip-merge, provider selection) work with reasoning format
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 6 to break down)
+
+### Phase 7: Claude Provider Support
+**Goal**: Users can generate training data using their Anthropic API key / Claude subscription, leveraging the provider abstraction from Phase 4
+
+**Depends on**: Phase 4
+
+**Requirements**: TBD during planning
+
+**Success Criteria** (what must be TRUE):
+  1. User runs `datakeg generate --provider claude --model claude-sonnet-4-5-20250929 <source> <output>` and pairs are generated via the Anthropic API
+  2. Anthropic API key is stored securely via the same key management system from Phase 4
+  3. Claude provider implements the same provider interface as Ollama and OpenRouter — no special-casing in the generator
+  4. User can select any available Claude model (Haiku, Sonnet, Opus, etc.)
+  5. All output formats (completion, chat, reasoning) work with the Claude provider
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 7 to break down)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Pipeline | 3/3 | ✓ Complete | 2026-02-05 |
 | 2. Smart Generation | 3/3 | ✓ Complete | 2026-02-06 |
 | 3. Production Ready | 3/3 | ✓ Complete | 2026-02-06 |
+| 4. Multi-Provider Support | 0/? | Not Started | — |
+| 5. Chat Format Support | 0/? | Not Started | — |
+| 6. Reasoning Format Support | 0/? | Not Started | — |
+| 7. Claude Provider Support | 0/? | Not Started | — |
 
 ---
 *Roadmap created: 2025-02-05*
-*Last updated: 2026-02-06 (Phase 3 complete)*
+*Last updated: 2026-02-07 (Phase 7 added)*
