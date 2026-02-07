@@ -30,6 +30,7 @@ train/valid/test JSONL files.`,
 
 // Configuration flags for the generate command.
 var (
+	flagProvider   string
 	flagModel      string
 	flagTrainPct   float64
 	flagValidPct   float64
@@ -43,8 +44,10 @@ var generateCmd = &cobra.Command{
 	Use:   "generate <source> <output>",
 	Short: "Generate train/valid/test datasets",
 	Long: `Process markdown and text files from source directory,
-generate question-answer pairs using Ollama, and output
-train/valid/test JSONL files to output directory.`,
+generate question-answer pairs using the configured LLM provider, and output
+train/valid/test JSONL files to output directory.
+
+Use --provider to select the LLM provider (ollama for local, openrouter for cloud).`,
 	Args: cobra.ExactArgs(2),
 	RunE: runGenerate,
 }
@@ -71,7 +74,8 @@ valid.jsonl, and test.jsonl files.`,
 
 func init() {
 	// Persistent flags available to all subcommands
-	RootCmd.PersistentFlags().StringVarP(&flagModel, "model", "m", "gpt-oss:20b", "Ollama model to use")
+	RootCmd.PersistentFlags().StringVarP(&flagModel, "model", "m", "gpt-oss:20b", "Model to use (provider-specific)")
+	RootCmd.PersistentFlags().StringVarP(&flagProvider, "provider", "", "ollama", "LLM provider to use (ollama, openrouter)")
 
 	// Local flags for generate command only
 	generateCmd.Flags().Float64VarP(&flagTrainPct, "train-pct", "", 0.6, "Training set percentage (0.0-1.0)")
@@ -91,13 +95,14 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	outputPath := args[1]
 
 	fmt.Printf("Generate command invoked with:\n")
-	fmt.Printf("  Source:  %s\n", sourcePath)
-	fmt.Printf("  Output:  %s\n", outputPath)
-	fmt.Printf("  Model:  %s\n", flagModel)
-	fmt.Printf("  Splits: train=%.0f%%, valid=%.0f%%, test=%.0f%%\n", flagTrainPct*100, flagValidPct*100, flagTestPct*100)
+	fmt.Printf("  Source:   %s\n", sourcePath)
+	fmt.Printf("  Output:   %s\n", outputPath)
+	fmt.Printf("  Provider: %s\n", flagProvider)
+	fmt.Printf("  Model:    %s\n", flagModel)
+	fmt.Printf("  Splits:   train=%.0f%%, valid=%.0f%%, test=%.0f%%\n", flagTrainPct*100, flagValidPct*100, flagTestPct*100)
 	fmt.Printf("  Pairs per 1K chars: %.1f\n", flagPairsPer1K)
 
-	return commands.ExecuteGeneratePipeline(sourcePath, outputPath, flagModel, flagPairsPer1K, flagValidPct, flagTestPct, flagTimeout, flagSkipMerge)
+	return commands.ExecuteGeneratePipeline(sourcePath, outputPath, flagProvider, flagModel, flagPairsPer1K, flagValidPct, flagTestPct, flagTimeout, flagSkipMerge)
 }
 
 func runMerge(cmd *cobra.Command, args []string) error {

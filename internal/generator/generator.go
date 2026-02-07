@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/danmurf/datakeg/internal/ollama"
 	"github.com/danmurf/datakeg/internal/processor"
+	"github.com/danmurf/datakeg/internal/provider"
 	"github.com/danmurf/datakeg/internal/templates"
 )
 
@@ -48,18 +48,18 @@ type Pair struct {
 
 // Generator handles the generation of prompt/completion pairs from documents.
 type Generator struct {
-	client *ollama.Client
-	config Config
+	provider provider.Provider
+	config   Config
 }
 
-// NewGenerator creates a new Generator with the given Ollama client and config.
-func NewGenerator(client *ollama.Client, config Config) *Generator {
+// NewGenerator creates a new Generator with the given provider and config.
+func NewGenerator(p provider.Provider, config Config) *Generator {
 	if config.Model == "" {
 		config.Model = DefaultConfig().Model
 	}
 	return &Generator{
-		client: client,
-		config: config,
+		provider: p,
+		config:   config,
 	}
 }
 
@@ -116,8 +116,8 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 		return nil, fmt.Errorf("execute template: %w", err)
 	}
 
-	// Call Ollama to generate pairs
-	response, err := g.client.Generate(ctx, g.config.Model, prompt)
+	// Call provider to generate pairs
+	response, _, err := g.provider.Generate(ctx, g.config.Model, prompt)
 	if err != nil {
 		return nil, fmt.Errorf("generate pairs: %w", err)
 	}
@@ -178,11 +178,11 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 			continue
 		}
 
-		// Call Ollama for backfill
-		backfillResponse, err := g.client.Generate(ctx, g.config.Model, backfillPrompt)
+		// Call provider for backfill
+		backfillResponse, _, err := g.provider.Generate(ctx, g.config.Model, backfillPrompt)
 		if err != nil {
 			// Log error but continue with what we have
-			fmt.Fprintf(os.Stderr, "Warning: Ollama generate failed for backfill attempt %d: %v\n", attempt+1, err)
+			fmt.Fprintf(os.Stderr, "Warning: generation failed for backfill attempt %d: %v\n", attempt+1, err)
 			continue
 		}
 

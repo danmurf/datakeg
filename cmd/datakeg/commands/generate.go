@@ -9,20 +9,21 @@ import (
 	"time"
 
 	"github.com/danmurf/datakeg/internal/generator"
-	"github.com/danmurf/datakeg/internal/ollama"
 	"github.com/danmurf/datakeg/internal/processor"
+	"github.com/danmurf/datakeg/internal/provider"
 	"github.com/danmurf/datakeg/internal/writer"
 )
 
 // ExecuteGeneratePipeline orchestrates the full generate pipeline:
 // 1. Load documents from source directory
-// 2. Create Ollama client
+// 2. Create provider (Ollama or OpenRouter)
 // 3. Generate prompt/completion pairs for each document (train → valid → test with exclusions)
 // 4. Write per-document JSONL files during processing
 // 5. Optionally merge into master files (skipable via skipMerge flag)
 func ExecuteGeneratePipeline(
 	sourceDir string,
 	outputDir string,
+	providerType string,
 	model string,
 	pairsPer1K float64,
 	validPct float64,
@@ -44,11 +45,11 @@ func ExecuteGeneratePipeline(
 		return fmt.Errorf("no markdown (.md) or text (.txt) files found in %s. Add some documentation files to the source directory and try again", sourceDir)
 	}
 
-	// Step 2: Create Ollama client
-	fmt.Printf("Connecting to Ollama...\n")
-	ollamaClient, err := ollama.NewClient()
+	// Step 2: Create provider
+	fmt.Printf("Creating %s provider...\n", providerType)
+	p, err := provider.NewProvider(provider.ProviderType(providerType))
 	if err != nil {
-		return fmt.Errorf("could not connect to Ollama. Make sure Ollama is running (ollama serve) and the model is available (ollama pull %s)", model)
+		return fmt.Errorf("could not create %s provider: %w", providerType, err)
 	}
 
 	// Step 3: Create generator with config
@@ -59,7 +60,7 @@ func ExecuteGeneratePipeline(
 		TestPercent:     testPct * 100,
 		Model:           model,
 	}
-	gen := generator.NewGenerator(ollamaClient, genConfig)
+	gen := generator.NewGenerator(p, genConfig)
 
 	// Step 4: Create output directory
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
