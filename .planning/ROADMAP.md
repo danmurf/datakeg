@@ -18,8 +18,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 4: Multi-Provider Support** - Provider abstraction, OpenRouter integration, API key management
 - [ ] **Phase 5: Chat Format Support** - Chat-style training data with messages/roles JSONL output
 - [ ] **Phase 6: Reasoning Format Support** - Chain-of-thought training data for reasoning models
-- [ ] **Phase 7: Claude Provider Support** - Anthropic API provider for generating data via Claude subscription
-- [ ] **Phase 8: Format Conversion** - Convert generated JSONL to model-specific training formats via templates
+- [ ] **Phase 7: Format Conversion** - Convert generated JSONL to model-specific training formats via templates
+- [ ] **Phase 8: Claude Provider Support** - Anthropic API provider for generating data via Claude subscription
 
 ## Phase Details
 
@@ -146,26 +146,7 @@ Plans:
 - [ ] 06-01-PLAN.md — FormatReasoning enum, reasoning templates, reasoning response parser, ReasoningFormat variants
 - [ ] 06-02-PLAN.md — CLI flags (--reasoning-format), reasoning JSONL writer, pipeline wiring
 
-### Phase 7: Claude Provider Support
-**Goal**: Users can generate training data using their Anthropic API key / Claude subscription, leveraging the provider abstraction from Phase 4
-
-**Depends on**: Phase 4
-
-**Requirements**: TBD during planning
-
-**Success Criteria** (what must be TRUE):
-  1. User runs `datakeg generate --provider claude --model claude-sonnet-4-5-20250929 <source> <output>` and pairs are generated via the Anthropic API
-  2. Anthropic API key is stored securely via the same key management system from Phase 4
-  3. Claude provider implements the same provider interface as Ollama and OpenRouter — no special-casing in the generator
-  4. User can select any available Claude model (Haiku, Sonnet, Opus, etc.)
-  5. All output formats (completion, chat, reasoning) work with the Claude provider
-
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd:plan-phase 7 to break down)
-
-### Phase 8: Format Conversion
+### Phase 7: Format Conversion
 **Goal**: Users can convert generated JSONL output files into model-specific training formats (e.g., Mistral Instruct) using customizable templates
 
 **Depends on**: Phase 5
@@ -178,6 +159,25 @@ Plans:
   3. Users can create custom conversion templates for any model-specific format
   4. Built-in templates ship embedded in the binary for common formats (Mistral Instruct, etc.)
   5. Conversion works with all source formats (completion, chat, reasoning) where the template supports them
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 7 to break down)
+
+### Phase 8: Claude Provider Support
+**Goal**: Users can generate training data using their Anthropic API key / Claude subscription, leveraging the provider abstraction from Phase 4
+
+**Depends on**: Phase 4
+
+**Requirements**: TBD during planning
+
+**Success Criteria** (what must be TRUE):
+  1. User runs `datakeg generate --provider claude --model claude-sonnet-4-5-20250929 <source> <output>` and pairs are generated via the Anthropic API
+  2. Anthropic API key is stored securely via the same key management system from Phase 4
+  3. Claude provider implements the same provider interface as Ollama and OpenRouter — no special-casing in the generator
+  4. User can select any available Claude model (Haiku, Sonnet, Opus, etc.)
+  5. All output formats (completion, chat, reasoning) work with the Claude provider
 
 **Plans:** 0 plans
 
@@ -197,8 +197,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 4. Multi-Provider Support | 0/3 | Not Started | — |
 | 5. Chat Format Support | 0/? | Not Started | — |
 | 6. Reasoning Format Support | 0/2 | Not Started | — |
-| 7. Claude Provider Support | 0/? | Not Started | — |
-| 8. Format Conversion | 0/? | Not Started | — |
+| 7. Format Conversion | 0/? | Not Started | — |
+| 8. Claude Provider Support | 0/? | Not Started | — |
 
 ---
 *Roadmap created: 2025-02-05*

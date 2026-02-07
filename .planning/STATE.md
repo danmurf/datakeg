@@ -65,8 +65,9 @@ None.
 - Phase 4 added: Multi-Provider Support (OpenRouter integration, provider abstraction, API key management)
 - Phase 5 added: Chat Format Support (chat-style messages/roles JSONL, new templates, --format flag)
 - Phase 6 added: Reasoning Format Support (chain-of-thought training data for reasoning models)
-- Phase 7 added: Claude Provider Support (Anthropic API provider via Claude subscription)
-- Phase 8 added: Format Conversion (convert generated JSONL to model-specific training formats via templates)
+- Phase 7 added: Format Conversion (convert generated JSONL to model-specific training formats via templates)
+- Phase 8 added: Claude Provider Support (Anthropic API provider via Claude subscription)
+- Phases 7 and 8 swapped: Format Conversion moved ahead of Claude Provider Support
 
 ### Blockers/Concerns
 
