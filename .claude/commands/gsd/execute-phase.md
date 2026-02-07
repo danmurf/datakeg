@@ -76,7 +76,7 @@ Phase: $ARGUMENTS
    For each wave in order:
    - Spawn `gsd-executor` for each plan in wave (parallel Task calls)
    - Wait for completion (Task blocks)
-   - Verify SUMMARYs created
+   - Verify SUMMARYs created and spot-check claims
    - Proceed to next wave
 
 5. **Aggregate results**
@@ -89,9 +89,13 @@ Phase: $ARGUMENTS
    git status --porcelain
    ```
 
-   **If changes exist:** Orchestrator made corrections between executor completions. Commit them:
+   **If changes exist:** Orchestrator made corrections between executor completions. Stage and commit them individually:
    ```bash
-   git add -u && git commit -m "fix({phase}): orchestrator corrections"
+   # Stage each modified file individually (never use git add -u, git add ., or git add -A)
+   git status --porcelain | grep '^ M' | cut -c4- | while read file; do
+     git add "$file"
+   done
+   git commit -m "fix({phase}): orchestrator corrections"
    ```
 
    **If clean:** Continue to verification.
