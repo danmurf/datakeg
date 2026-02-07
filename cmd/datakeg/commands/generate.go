@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/danmurf/datakeg/internal/cost"
 	"github.com/danmurf/datakeg/internal/generator"
 	"github.com/danmurf/datakeg/internal/processor"
 	"github.com/danmurf/datakeg/internal/provider"
+	"github.com/danmurf/datakeg/internal/usage"
 	"github.com/danmurf/datakeg/internal/writer"
 )
 
@@ -105,7 +105,7 @@ func ExecuteGeneratePipeline(
 	var testPairs []writer.TrainingPair
 
 	// Track usage for paid providers
-	usageTracker := &cost.Tracker{}
+	usageTracker := &usage.Tracker{}
 
 	for i, doc := range documents {
 		docPath, _ := filepath.Rel(sourceDir, doc.Path)

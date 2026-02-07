@@ -1,9 +1,8 @@
-package cost
+package usage
 
 import (
 	"testing"
 
-	"github.com/danmurf/datakeg/internal/processor"
 	"github.com/danmurf/datakeg/internal/provider"
 )
 
@@ -81,39 +80,5 @@ func TestTracker_Add(t *testing.T) {
 	}
 	if tracker.TotalCost != 0.00075 {
 		t.Errorf("expected 0.00075 cost after second add, got: %f", tracker.TotalCost)
-	}
-}
-
-func TestTracker_Summary(t *testing.T) {
-	tracker := &Tracker{
-		TotalPromptTokens:     1000,
-		TotalCompletionTokens: 500,
-		TotalTokens:           1500,
-		TotalCost:             0.0015,
-	}
-
-	summary := tracker.Summary()
-	expected := "Tokens used: 1000 prompt + 500 completion = 1500 total. Estimated cost: $0.0015"
-	if summary != expected {
-		t.Errorf("Summary() = %q, want %q", summary, expected)
-	}
-}
-
-func TestEstimateRunCost(t *testing.T) {
-	// Create a single document with 1000 chars
-	docs := []processor.Document{
-		{Content: string(make([]byte, 1000)), Name: "test.md"},
-	}
-
-	// Estimate cost: pairs = ceil(1000/1000 * 10) = 10 pairs
-	// Prompt: 1000 chars + 500 template = 1500 chars -> ceil(1500/4) = 375 tokens
-	// Completion: 10 pairs * 3 splits * 200 chars = 6000 chars -> ceil(6000/4) = 1500 tokens
-	// Total prompt tokens = 375, completion = 1500
-	// Cost: (375/1M * $1.0) + (1500/1M * $2.0) = $0.000375 + $0.003 = $0.003375
-	cost := EstimateRunCost(docs, 10.0, 1.0, 2.0)
-
-	// Allow for some variation in the estimate
-	if cost < 0.002 || cost > 0.005 {
-		t.Errorf("EstimateRunCost = %f, expected between 0.002 and 0.005", cost)
 	}
 }
