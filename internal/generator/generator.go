@@ -70,7 +70,8 @@ func (g *Generator) GetConfig() Config {
 
 // Generate creates prompt/completion pairs from a document for a specific split type.
 // It accepts excludePairs to avoid regenerating similar pairs.
-func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split SplitType, excludePairs []Pair) ([]Pair, error) {
+// Returns pairs, accumulated usage metadata, and any error.
+func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split SplitType, excludePairs []Pair) ([]Pair, *provider.UsageMetadata, error) {
 	// Calculate pair count using float64 to avoid integer truncation
 	totalPairs := g.CalculatePairs(doc.Content)
 	pairCounts := g.CalculateSplitCounts(totalPairs)
@@ -84,11 +85,11 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 	case SplitTest:
 		count = pairCounts.Test
 	default:
-		return nil, fmt.Errorf("unknown split type: %s", split)
+		return nil, nil, fmt.Errorf("unknown split type: %s", split)
 	}
 
 	if count <= 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	// Get the correct template for this split type
@@ -113,13 +114,22 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 
 	prompt, err := templates.ExecuteTemplate(templateName, promptData)
 	if err != nil {
-		return nil, fmt.Errorf("execute template: %w", err)
+		return nil, nil, fmt.Errorf("execute template: %w", err)
 	}
 
 	// Call provider to generate pairs
-	response, _, err := g.provider.Generate(ctx, g.config.Model, prompt)
+	response, usage, err := g.provider.Generate(ctx, g.config.Model, prompt)
 	if err != nil {
-		return nil, fmt.Errorf("generate pairs: %w", err)
+		return nil, nil, fmt.Errorf("generate pairs: %w", err)
+	}
+
+	// Track accumulated usage
+	var totalUsage provider.UsageMetadata
+	if usage != nil {
+		totalUsage.PromptTokens += usage.PromptTokens
+		totalUsage.CompletionTokens += usage.CompletionTokens
+		totalUsage.TotalTokens += usage.TotalTokens
+		totalUsage.EstimatedCost += usage.EstimatedCost
 	}
 
 	// Parse the response into pairs
@@ -141,7 +151,7 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 
 	// If we have enough pairs, return them
 	if len(uniquePairs) >= count {
-		return uniquePairs[:count], nil
+		return uniquePairs[:count], &totalUsage, nil
 	}
 
 	// Backfill loop - retry up to 3 times to reach target count
@@ -179,11 +189,19 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 		}
 
 		// Call provider for backfill
-		backfillResponse, _, err := g.provider.Generate(ctx, g.config.Model, backfillPrompt)
+		backfillResponse, backfillUsage, err := g.provider.Generate(ctx, g.config.Model, backfillPrompt)
 		if err != nil {
 			// Log error but continue with what we have
 			fmt.Fprintf(os.Stderr, "Warning: generation failed for backfill attempt %d: %v\n", attempt+1, err)
 			continue
+		}
+
+		// Accumulate backfill usage
+		if backfillUsage != nil {
+			totalUsage.PromptTokens += backfillUsage.PromptTokens
+			totalUsage.CompletionTokens += backfillUsage.CompletionTokens
+			totalUsage.TotalTokens += backfillUsage.TotalTokens
+			totalUsage.EstimatedCost += backfillUsage.EstimatedCost
 		}
 
 		// Parse backfill response
@@ -218,9 +236,9 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 
 	// Return what we have (may be less than count if max attempts reached)
 	if len(allPairs) > count {
-		return allPairs[:count], nil
+		return allPairs[:count], &totalUsage, nil
 	}
-	return allPairs, nil
+	return allPairs, &totalUsage, nil
 }
 
 // CalculatePairs calculates the total number of pairs based on document length.

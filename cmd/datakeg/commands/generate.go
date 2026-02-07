@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/danmurf/datakeg/internal/cost"
 	"github.com/danmurf/datakeg/internal/generator"
 	"github.com/danmurf/datakeg/internal/processor"
 	"github.com/danmurf/datakeg/internal/provider"
@@ -30,6 +32,8 @@ func ExecuteGeneratePipeline(
 	testPct float64,
 	timeoutMinutes int,
 	skipMerge bool,
+	skipConfirm bool,
+	dryRun bool,
 ) error {
 	fmt.Printf("Starting pipeline...\n")
 
@@ -43,6 +47,11 @@ func ExecuteGeneratePipeline(
 
 	if len(documents) == 0 {
 		return fmt.Errorf("no markdown (.md) or text (.txt) files found in %s. Add some documentation files to the source directory and try again", sourceDir)
+	}
+
+	// Validate model for OpenRouter
+	if providerType == string(provider.ProviderOpenRouter) && model == "" {
+		return fmt.Errorf("openrouter requires an explicit model selection. Use --model to specify a model (e.g., --model meta-llama/llama-3.1-70b-instruct). Run 'datakeg list-providers' to see available models")
 	}
 
 	// Step 2: Create provider
@@ -62,6 +71,29 @@ func ExecuteGeneratePipeline(
 	}
 	gen := generator.NewGenerator(p, genConfig)
 
+	// Cost estimation and confirmation for paid providers
+	if providerType == string(provider.ProviderOpenRouter) {
+		// Estimate cost using rough OpenRouter average pricing ($1/M prompt, $2/M completion)
+		estimatedCost := cost.EstimateRunCost(documents, pairsPer1K, 1.0, 2.0)
+		fmt.Printf("\nEstimated cost: $%.4f\n", estimatedCost)
+		fmt.Println("Actual cost may differ. You are responsible for all API charges.")
+		fmt.Println()
+
+		if dryRun {
+			fmt.Println("Dry run - exiting without generation.")
+			return nil
+		}
+
+		if !skipConfirm {
+			fmt.Print("Continue? [y/N] ")
+			reader := bufio.NewReader(os.Stdin)
+			input, _ := reader.ReadString('\n')
+			if strings.TrimSpace(input) != "y" && strings.TrimSpace(input) != "Y" {
+				return fmt.Errorf("operation cancelled by user")
+			}
+		}
+	}
+
 	// Step 4: Create output directory
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return fmt.Errorf("could not create output directory %s. Check that you have write permissions and the path is valid", outputDir)
@@ -74,6 +106,9 @@ func ExecuteGeneratePipeline(
 	var validPairs []writer.TrainingPair
 	var testPairs []writer.TrainingPair
 
+	// Track usage for paid providers
+	usageTracker := &cost.Tracker{}
+
 	for i, doc := range documents {
 		docPath, _ := filepath.Rel(sourceDir, doc.Path)
 		fmt.Printf("[%d/%d] Processing: %s (%d chars)\n", i+1, len(documents), docPath, len(doc.Content))
@@ -81,7 +116,7 @@ func ExecuteGeneratePipeline(
 		// Per-document timeout so each document gets the full timeout duration
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMinutes)*time.Minute)
 
-		// Get pair counts from the generator (single source of truth)
+		// Get pair counts from the generator (single source of truth
 		totalPairs := gen.CalculatePairs(doc.Content)
 		pairCounts := gen.CalculateSplitCounts(totalPairs)
 		trainCount := pairCounts.Train
@@ -97,12 +132,13 @@ func ExecuteGeneratePipeline(
 		// Step 5a: Generate train pairs (no exclusions)
 		if trainCount > 0 {
 			fmt.Printf("     → Generating train pairs...\n")
-			pairs, err := gen.Generate(ctx, &doc, generator.SplitTrain, nil)
+			pairs, usage, err := gen.Generate(ctx, &doc, generator.SplitTrain, nil)
 			if err != nil {
 				cancel()
-				return fmt.Errorf("failed to generate training pairs for %s. This may be a temporary Ollama issue. Try again, or try a different model", doc.Name)
+				return fmt.Errorf("failed to generate training pairs for %s. This may be a temporary issue. Try again, or try a different model", doc.Name)
 			}
 			docTrainPairs = pairs
+			usageTracker.Add(usage)
 			fmt.Printf("     → Train: %d pairs generated\n", len(pairs))
 
 			// Convert and append to global train slice
@@ -127,12 +163,13 @@ func ExecuteGeneratePipeline(
 		// Step 5b: Generate valid pairs (exclude train pairs)
 		if validCount > 0 {
 			fmt.Printf("     → Generating valid pairs (excluding %d train pairs)...\n", len(docTrainPairs))
-			pairs, err := gen.Generate(ctx, &doc, generator.SplitValid, docTrainPairs)
+			pairs, usage, err := gen.Generate(ctx, &doc, generator.SplitValid, docTrainPairs)
 			if err != nil {
 				cancel()
-				return fmt.Errorf("failed to generate validation pairs for %s. This may be a temporary Ollama issue. Try again, or try a different model", doc.Name)
+				return fmt.Errorf("failed to generate validation pairs for %s. This may be a temporary issue. Try again, or try a different model", doc.Name)
 			}
 			docValidPairs = pairs
+			usageTracker.Add(usage)
 			fmt.Printf("     → Valid: %d pairs generated\n", len(pairs))
 
 			// Convert and append to global valid slice
@@ -159,11 +196,12 @@ func ExecuteGeneratePipeline(
 			// Combine train and valid exclusions
 			allExclude := append(docTrainPairs, docValidPairs...)
 			fmt.Printf("     → Generating test pairs (excluding %d train+valid pairs)...\n", len(allExclude))
-			pairs, err := gen.Generate(ctx, &doc, generator.SplitTest, allExclude)
+			pairs, usage, err := gen.Generate(ctx, &doc, generator.SplitTest, allExclude)
 			if err != nil {
 				cancel()
-				return fmt.Errorf("failed to generate test pairs for %s. This may be a temporary Ollama issue. Try again, or try a different model", doc.Name)
+				return fmt.Errorf("failed to generate test pairs for %s. This may be a temporary issue. Try again, or try a different model", doc.Name)
 			}
+			usageTracker.Add(usage)
 			fmt.Printf("     → Test: %d pairs generated\n", len(pairs))
 
 			// Convert and append to global test slice
@@ -224,6 +262,11 @@ func ExecuteGeneratePipeline(
 
 	fmt.Printf("Pipeline complete!\n")
 	fmt.Printf("Total pairs: train=%d, valid=%d, test=%d\n", len(trainPairs), len(validPairs), len(testPairs))
+
+	// Post-run summary for paid providers
+	if providerType == string(provider.ProviderOpenRouter) {
+		fmt.Printf("\n%s\n", usageTracker.Summary())
+	}
 
 	return nil
 }
