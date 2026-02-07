@@ -1,28 +1,23 @@
 <div align="center">
-  <img src="brewlius.png" alt="dataKeg logo" width="200" />
+  <img src="brewlius.png" alt="datakeg logo" width="200" />
 </div>
 
-<h1 align="center">DataKeg</h1>
+<h1 align="center">datakeg</h1>
 
 <p align="center">
   A command-line tool that transforms raw documentation into LLM training datasets.
 </p>
 
-<div style="display: flex; gap: 20px; justify-content: center; align-items: center;">
-  <a href="https://github.com/danmurf/dataKeg/actions/workflows/ci.yml">
-    <img src="https://img.shields.io/github/actions/workflow/status/danmurf/dataKeg/ci.yml/lint?label=Lint" alt="Lint" />
-  </a>
-  <a href="https://github.com/danmurf/dataKeg/actions/workflows/ci.yml">
-    <img src="https://img.shields.io/github/actions/workflow/status/danmurf/dataKeg/ci.yml/test?label=Test" alt="Test" />
-  </a>
-  <a href="https://github.com/danmurf/dataKeg/actions/workflows/ci.yml">
-    <img src="https://img.shields.io/github/actions/workflow/status/danmurf/dataKeg/ci.yml/build?label=Build" alt="Build" />
-  </a>
+<div align="center">
+
+[![CI](https://github.com/danmurf/datakeg/actions/workflows/ci.yml/badge.svg)](https://github.com/danmurf/datakeg/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/danmurf/datakeg?label=License)](https://github.com/danmurf/datakeg/blob/main/LICENSE)
+
 </div>
 
 ## Overview
 
-dataKeg processes markdown and text files from a source directory, generates question-answer pairs using Ollama, and outputs structured JSONL files ready for training, validation, and testing.
+datakeg processes markdown and text files from a source directory, generates question-answer pairs using Ollama, and outputs structured JSONL files ready for training, validation, and testing.
 
 ## Features
 
@@ -41,7 +36,7 @@ dataKeg processes markdown and text files from a source directory, generates que
 ## Installation
 
 ```bash
-go build -o dataKeg ./cmd/dataKeg
+go build -o datakeg ./cmd/datakeg
 ```
 
 ## Usage
@@ -49,20 +44,20 @@ go build -o dataKeg ./cmd/dataKeg
 ### Basic Command
 
 ```bash
-dataKeg generate <source-directory> <output-directory>
+datakeg generate <source-directory> <output-directory>
 ```
 
 ### Example
 
 ```bash
 # Generate training data from documentation in ./docs
-dataKeg generate ./docs ./output
+datakeg generate ./docs ./output
 ```
 
 ### Options
 
 ```bash
-dataKeg generate [flags] <source> <output>
+datakeg generate [flags] <source> <output>
 
 Flags:
   -m, --model string          Ollama model to use (default "gpt-oss:20b")
@@ -76,7 +71,7 @@ Flags:
 ### Example with Options
 
 ```bash
-dataKeg generate \
+datakeg generate \
   --model llama2 \
   --pairs-per-1k 2.0 \
   --timeout 60 \
@@ -103,7 +98,7 @@ Each line in the JSONL files contains a JSON object with:
 ## Version Information
 
 ```bash
-dataKeg version
+datakeg version
 ```
 
 ## License
