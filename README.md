@@ -1,10 +1,24 @@
-# datakeg
+<div align="center">
+  <img src="brewlius.png" alt="dataKeg logo" width="200" />
+</div>
 
-A command-line tool that transforms raw documentation into LLM training datasets.
+<h1 align="center">DataKeg</h1>
+
+<p align="center">
+  <a href="https://github.com/danmurf/dataKeg/actions/workflows/ci.yml">
+    <img src="https://github.com/danmurf/dataKeg/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI Status" />
+  </a>
+</p>
+
+<p align="center">
+  A command-line tool that transforms raw documentation into LLM training datasets.
+</p>
+
+---
 
 ## Overview
 
-datakeg processes markdown and text files from a source directory, generates question-answer pairs using Ollama, and outputs structured JSONL files ready for training, validation, and testing.
+dataKeg processes markdown and text files from a source directory, generates question-answer pairs using Ollama, and outputs structured JSONL files ready for training, validation, and testing.
 
 ## Features
 
@@ -13,6 +27,22 @@ datakeg processes markdown and text files from a source directory, generates que
 - Automatic train/validation/test split generation
 - Configurable pair density per document
 - JSONL output format compatible with popular ML frameworks
+
+## CI Pipeline
+
+<p align="center">
+  <a href="https://github.com/danmurf/dataKeg/actions/workflows/ci.yml">
+    <img src="https://github.com/danmurf/dataKeg/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI Status" />
+  </a>
+</p>
+
+The project uses GitHub Actions for continuous integration with three jobs:
+
+| Job | Status | Description |
+|-----|--------|-------------|
+| **Lint** | ![Lint](https://github.com/danmurf/dataKeg/actions/workflows/ci.yml/badge.svg?job=lint) | Code quality checks with golangci-lint |
+| **Test** | ![Test](https://github.com/danmurf/dataKeg/actions/workflows/ci.yml/badge.svg?job=test) | Unit tests with coverage reporting |
+| **Build** | ![Build](https://github.com/danmurf/dataKeg/actions/workflows/ci.yml/badge.svg?job=build) | Binary compilation and verification |
 
 ## Prerequisites
 
@@ -23,7 +53,7 @@ datakeg processes markdown and text files from a source directory, generates que
 ## Installation
 
 ```bash
-go build -o datakeg ./cmd/datakeg
+go build -o dataKeg ./cmd/dataKeg
 ```
 
 ## Usage
@@ -31,20 +61,20 @@ go build -o datakeg ./cmd/datakeg
 ### Basic Command
 
 ```bash
-datakeg generate <source-directory> <output-directory>
+dataKeg generate <source-directory> <output-directory>
 ```
 
 ### Example
 
 ```bash
 # Generate training data from documentation in ./docs
-datakeg generate ./docs ./output
+dataKeg generate ./docs ./output
 ```
 
 ### Options
 
 ```bash
-datakeg generate [flags] <source> <output>
+dataKeg generate [flags] <source> <output>
 
 Flags:
   -m, --model string          Ollama model to use (default "gpt-oss:20b")
@@ -58,7 +88,7 @@ Flags:
 ### Example with Options
 
 ```bash
-datakeg generate \
+dataKeg generate \
   --model llama2 \
   --pairs-per-1k 2.0 \
   --timeout 60 \
@@ -85,7 +115,7 @@ Each line in the JSONL files contains a JSON object with:
 ## Version Information
 
 ```bash
-datakeg version
+dataKeg version
 ```
 
 ## License
