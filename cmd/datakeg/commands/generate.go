@@ -29,6 +29,7 @@ func ExecuteGeneratePipeline(
 	model string,
 	format string,
 	systemMessage string,
+	reasoningFormat string,
 	pairsPer1K float64,
 	validPct float64,
 	testPct float64,
@@ -55,6 +56,15 @@ func ExecuteGeneratePipeline(
 	parsedFormat, err := generator.ParseFormat(format)
 	if err != nil {
 		return err
+	}
+
+	// Validate reasoning format (only relevant when format is reasoning)
+	var parsedReasoningFormat generator.ReasoningFormat
+	if parsedFormat == generator.FormatReasoning {
+		parsedReasoningFormat, err = generator.ParseReasoningFormat(reasoningFormat)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Validate model for OpenRouter
@@ -151,7 +161,7 @@ func ExecuteGeneratePipeline(
 			// Append to global train slice
 			if len(pairs) > 0 {
 				perDocFile := sanitizeDocName(doc, outputDir, "train")
-				if err := writePairsForFormat(perDocFile, pairs, parsedFormat, systemMessage); err != nil {
+				if err := writePairsForFormat(perDocFile, pairs, parsedFormat, systemMessage, parsedReasoningFormat); err != nil {
 					cancel()
 					return fmt.Errorf("failed to write %s. Check disk space and write permissions", filepath.Base(perDocFile))
 				}
@@ -177,7 +187,7 @@ func ExecuteGeneratePipeline(
 			// Write per-document valid file
 			if len(pairs) > 0 {
 				perDocFile := sanitizeDocName(doc, outputDir, "valid")
-				if err := writePairsForFormat(perDocFile, pairs, parsedFormat, systemMessage); err != nil {
+				if err := writePairsForFormat(perDocFile, pairs, parsedFormat, systemMessage, parsedReasoningFormat); err != nil {
 					cancel()
 					return fmt.Errorf("failed to write %s. Check disk space and write permissions", filepath.Base(perDocFile))
 				}
@@ -204,7 +214,7 @@ func ExecuteGeneratePipeline(
 			// Write per-document test file
 			if len(pairs) > 0 {
 				perDocFile := sanitizeDocName(doc, outputDir, "test")
-				if err := writePairsForFormat(perDocFile, pairs, parsedFormat, systemMessage); err != nil {
+				if err := writePairsForFormat(perDocFile, pairs, parsedFormat, systemMessage, parsedReasoningFormat); err != nil {
 					cancel()
 					return fmt.Errorf("failed to write %s. Check disk space and write permissions", filepath.Base(perDocFile))
 				}
@@ -227,7 +237,7 @@ func ExecuteGeneratePipeline(
 
 	if len(trainPairs) > 0 {
 		outFile := filepath.Join(outputDir, "train.jsonl")
-		if err := writePairsForFormat(outFile, trainPairs, parsedFormat, systemMessage); err != nil {
+		if err := writePairsForFormat(outFile, trainPairs, parsedFormat, systemMessage, parsedReasoningFormat); err != nil {
 			return fmt.Errorf("failed to write train.jsonl. Check disk space and write permissions")
 		}
 		fmt.Printf("  Written %d pairs to train.jsonl\n", len(trainPairs))
@@ -235,7 +245,7 @@ func ExecuteGeneratePipeline(
 
 	if len(validPairs) > 0 {
 		outFile := filepath.Join(outputDir, "valid.jsonl")
-		if err := writePairsForFormat(outFile, validPairs, parsedFormat, systemMessage); err != nil {
+		if err := writePairsForFormat(outFile, validPairs, parsedFormat, systemMessage, parsedReasoningFormat); err != nil {
 			return fmt.Errorf("failed to write valid.jsonl. Check disk space and write permissions")
 		}
 		fmt.Printf("  Written %d pairs to valid.jsonl\n", len(validPairs))
@@ -243,7 +253,7 @@ func ExecuteGeneratePipeline(
 
 	if len(testPairs) > 0 {
 		outFile := filepath.Join(outputDir, "test.jsonl")
-		if err := writePairsForFormat(outFile, testPairs, parsedFormat, systemMessage); err != nil {
+		if err := writePairsForFormat(outFile, testPairs, parsedFormat, systemMessage, parsedReasoningFormat); err != nil {
 			return fmt.Errorf("failed to write test.jsonl. Check disk space and write permissions")
 		}
 		fmt.Printf("  Written %d pairs to test.jsonl\n", len(testPairs))
@@ -285,8 +295,8 @@ func convertPairs(pairs []generator.Pair) []writer.TrainingPair {
 	return result
 }
 
-// writePairsForFormat writes pairs in the specified format (completion or chat).
-func writePairsForFormat(filename string, pairs []generator.Pair, format generator.FormatType, systemMessage string) error {
+// writePairsForFormat writes pairs in the specified format (completion, chat, or reasoning).
+func writePairsForFormat(filename string, pairs []generator.Pair, format generator.FormatType, systemMessage string, reasoningFormat generator.ReasoningFormat) error {
 	switch format {
 	case generator.FormatChat:
 		var messages []writer.ChatMessage
@@ -294,6 +304,21 @@ func writePairsForFormat(filename string, pairs []generator.Pair, format generat
 			messages = append(messages, writer.ConvertPairToChatMessage(p.Prompt, p.Completion, systemMessage))
 		}
 		return writer.WriteChatJSONL(filename, messages)
+	case generator.FormatReasoning:
+		switch reasoningFormat {
+		case generator.ReasoningFormatIntegrated:
+			var trainingPairs []writer.TrainingPair
+			for _, p := range pairs {
+				trainingPairs = append(trainingPairs, writer.ConvertPairToIntegratedReasoning(p.Prompt, p.Completion))
+			}
+			return writer.WriteJSONL(filename, trainingPairs)
+		default:
+			var reasoningPairs []writer.ReasoningPair
+			for _, p := range pairs {
+				reasoningPairs = append(reasoningPairs, writer.ConvertPairToReasoningPair(p.Prompt, p.Completion))
+			}
+			return writer.WriteReasoningJSONL(filename, reasoningPairs)
+		}
 	default:
 		return writer.WriteJSONL(filename, convertPairs(pairs))
 	}

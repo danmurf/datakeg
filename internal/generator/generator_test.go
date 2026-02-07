@@ -408,6 +408,12 @@ func TestParseFormat(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "valid reasoning format",
+			input:   "reasoning",
+			want:    FormatReasoning,
+			wantErr: false,
+		},
+		{
 			name:    "invalid format",
 			input:   "json",
 			want:    "",
@@ -483,6 +489,30 @@ func TestGetTemplateName_FormatAware(t *testing.T) {
 			format:    FormatChat,
 			splitType: SplitTest,
 			want:      "chat_test.tmpl",
+		},
+		{
+			name:      "reasoning train",
+			format:    FormatReasoning,
+			splitType: SplitTrain,
+			want:      "reasoning_train.tmpl",
+		},
+		{
+			name:      "reasoning valid",
+			format:    FormatReasoning,
+			splitType: SplitValid,
+			want:      "reasoning_valid.tmpl",
+		},
+		{
+			name:      "reasoning test",
+			format:    FormatReasoning,
+			splitType: SplitTest,
+			want:      "reasoning_test.tmpl",
+		},
+		{
+			name:      "unknown split defaults to reasoning_train",
+			format:    FormatReasoning,
+			splitType: SplitType("unknown"),
+			want:      "reasoning_train.tmpl",
 		},
 		{
 			name:      "unknown format defaults to completion train",
@@ -589,6 +619,160 @@ func TestGenerator_parseChatResponse(t *testing.T) {
 
 			if len(got) != len(tt.want) {
 				t.Errorf("parseChatResponse() returned %d pairs, want %d", len(got), len(tt.want))
+				return
+			}
+
+			for i := range got {
+				if got[i].Prompt != tt.want[i].Prompt {
+					t.Errorf("pair[%d].Prompt = %q, want %q", i, got[i].Prompt, tt.want[i].Prompt)
+				}
+				if got[i].Completion != tt.want[i].Completion {
+					t.Errorf("pair[%d].Completion = %q, want %q", i, got[i].Completion, tt.want[i].Completion)
+				}
+			}
+		})
+	}
+}
+
+func TestParseReasoningFormat(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    ReasoningFormat
+		wantErr bool
+	}{
+		{
+			name:    "valid separate format",
+			input:   "separate",
+			want:    ReasoningFormatSeparate,
+			wantErr: false,
+		},
+		{
+			name:    "valid integrated format",
+			input:   "integrated",
+			want:    ReasoningFormatIntegrated,
+			wantErr: false,
+		},
+		{
+			name:    "invalid format",
+			input:   "invalid",
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "empty string",
+			input:   "",
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "unknown format",
+			input:   "merged",
+			want:    "",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseReasoningFormat(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseReasoningFormat() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ParseReasoningFormat() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGenerator_parseReasoningResponse(t *testing.T) {
+	tests := []struct {
+		name     string
+		response string
+		want     []Pair
+	}{
+		{
+			name:     "valid single reasoning pair",
+			response: `[{"question": "Why does X?", "reasoning": "「thinking」Step 1: ... Therefore...「/thinking」", "answer": "Because Y."}]`,
+			want: []Pair{
+				{Prompt: "Why does X?", Completion: "「thinking」Step 1: ... Therefore...「/thinking」\n\nBecause Y."},
+			},
+		},
+		{
+			name: "valid multiple reasoning pairs",
+			response: `[
+				{"question": "Why X?", "reasoning": "「thinking」Step 1...「/thinking」", "answer": "Because Y."},
+				{"question": "How A?", "reasoning": "「thinking」Step 1...「/thinking」", "answer": "By doing B."}
+			]`,
+			want: []Pair{
+				{Prompt: "Why X?", Completion: "「thinking」Step 1...「/thinking」\n\nBecause Y."},
+				{Prompt: "How A?", Completion: "「thinking」Step 1...「/thinking」\n\nBy doing B."},
+			},
+		},
+		{
+			name:     "response with extra text before JSON",
+			response: `Here are the pairs:\n[{"question": "Q", "reasoning": "「thinking」R「/thinking」", "answer": "A"}]`,
+			want: []Pair{
+				{Prompt: "Q", Completion: "「thinking」R「/thinking」\n\nA"},
+			},
+		},
+		{
+			name:     "response with extra text after JSON",
+			response: `[{"question": "Q", "reasoning": "「thinking」R「/thinking」", "answer": "A"}]\nThese are good pairs.`,
+			want: []Pair{
+				{Prompt: "Q", Completion: "「thinking」R「/thinking」\n\nA"},
+			},
+		},
+		{
+			name:     "empty response",
+			response: "",
+			want:     []Pair{},
+		},
+		{
+			name:     "whitespace only",
+			response: "   \n\t  ",
+			want:     []Pair{},
+		},
+		{
+			name:     "no JSON array",
+			response: "Just some text without JSON",
+			want:     []Pair{},
+		},
+		{
+			name:     "malformed JSON",
+			response: `[{"question": "Q", "reasoning": "R", "answer": }]`,
+			want:     []Pair{},
+		},
+		{
+			name:     "empty array",
+			response: `[]`,
+			want:     []Pair{},
+		},
+		{
+			name:     "reasoning without think tags",
+			response: `[{"question": "Why X?", "reasoning": "Step 1: ... Therefore...", "answer": "Because Y."}]`,
+			want: []Pair{
+				{Prompt: "Why X?", Completion: "Step 1: ... Therefore...\n\nBecause Y."},
+			},
+		},
+		{
+			name:     "empty reasoning field",
+			response: `[{"question": "Why X?", "reasoning": "", "answer": "Because Y."}]`,
+			want: []Pair{
+				{Prompt: "Why X?", Completion: "\n\nBecause Y."},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewGenerator(nil, DefaultConfig())
+			got := g.parseReasoningResponse(tt.response)
+
+			if len(got) != len(tt.want) {
+				t.Errorf("parseReasoningResponse() returned %d pairs, want %d", len(got), len(tt.want))
 				return
 			}
 

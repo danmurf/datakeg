@@ -298,3 +298,146 @@ func TestExecuteTemplate_chatNoExcludePairs(t *testing.T) {
 		t.Error("ExecuteTemplate() should not render exclusion section when ExcludePairs is nil")
 	}
 }
+
+// TestExecuteTemplate_reasoningTrain tests the reasoning training template execution.
+func TestExecuteTemplate_reasoningTrain(t *testing.T) {
+	data := PromptData{
+		DocumentContent: "This is a test document about Go programming.",
+		PairCount:       3,
+		DocumentName:    "test.md",
+	}
+
+	result, err := ExecuteTemplate("reasoning_train.tmpl", data)
+	if err != nil {
+		t.Fatalf("ExecuteTemplate() error = %v", err)
+	}
+
+	// Verify template substitutions
+	if !strings.Contains(result, "This is a test document about Go programming.") {
+		t.Error("ExecuteTemplate() missing DocumentContent")
+	}
+	if !strings.Contains(result, "3") {
+		t.Error("ExecuteTemplate() missing PairCount")
+	}
+	if !strings.Contains(result, "multi-step reasoning") {
+		t.Error("ExecuteTemplate() missing multi-step reasoning instruction")
+	}
+	if !strings.Contains(result, "reasoning training data") {
+		t.Error("ExecuteTemplate() wrong template used")
+	}
+	if !strings.Contains(result, "question") {
+		t.Error("ExecuteTemplate() missing question field instruction")
+	}
+	if !strings.Contains(result, "reasoning") {
+		t.Error("ExecuteTemplate() missing reasoning field instruction")
+	}
+	if !strings.Contains(result, "answer") {
+		t.Error("ExecuteTemplate() missing answer field instruction")
+	}
+	if !strings.Contains(result, "「thinking」") {
+		t.Error("ExecuteTemplate() missing thinking tags instruction")
+	}
+}
+
+// TestExecuteTemplate_reasoningValid tests the reasoning validation template execution.
+func TestExecuteTemplate_reasoningValid(t *testing.T) {
+	data := PromptData{
+		DocumentContent: "Test content for validation.",
+		PairCount:       5,
+		DocumentName:    "valid.md",
+	}
+
+	result, err := ExecuteTemplate("reasoning_valid.tmpl", data)
+	if err != nil {
+		t.Fatalf("ExecuteTemplate() error = %v", err)
+	}
+
+	// Verify template substitutions
+	if !strings.Contains(result, "Test content for validation.") {
+		t.Error("ExecuteTemplate() missing DocumentContent")
+	}
+	if !strings.Contains(result, "5") {
+		t.Error("ExecuteTemplate() missing PairCount")
+	}
+	if !strings.Contains(result, "reasoning validation data") {
+		t.Error("ExecuteTemplate() wrong template used")
+	}
+	if !strings.Contains(result, "deeper understanding") {
+		t.Error("ExecuteTemplate() missing deeper understanding instruction")
+	}
+}
+
+// TestExecuteTemplate_reasoningTest tests the reasoning test template execution.
+func TestExecuteTemplate_reasoningTest(t *testing.T) {
+	data := PromptData{
+		DocumentContent: "Test content for evaluation.",
+		PairCount:       2,
+		DocumentName:    "test_doc.md",
+	}
+
+	result, err := ExecuteTemplate("reasoning_test.tmpl", data)
+	if err != nil {
+		t.Fatalf("ExecuteTemplate() error = %v", err)
+	}
+
+	// Verify template substitutions
+	if !strings.Contains(result, "Test content for evaluation.") {
+		t.Error("ExecuteTemplate() missing DocumentContent")
+	}
+	if !strings.Contains(result, "2") {
+		t.Error("ExecuteTemplate() missing PairCount")
+	}
+	if !strings.Contains(result, "reasoning test data") {
+		t.Error("ExecuteTemplate() wrong template used")
+	}
+	if !strings.Contains(result, "most challenging") {
+		t.Error("ExecuteTemplate() missing most challenging instruction")
+	}
+}
+
+// TestExecuteTemplate_reasoningExcludePairs tests that exclusion section renders correctly in reasoning template.
+func TestExecuteTemplate_reasoningExcludePairs(t *testing.T) {
+	data := PromptData{
+		DocumentContent: "Test document content.",
+		PairCount:       2,
+		ExcludePairs: []ExcludePair{
+			{Prompt: "Q1", Completion: "A1"},
+			{Prompt: "Q2", Completion: "A2"},
+		},
+	}
+
+	result, err := ExecuteTemplate("reasoning_train.tmpl", data)
+	if err != nil {
+		t.Fatalf("ExecuteTemplate() error = %v", err)
+	}
+
+	// Verify exclusion section is rendered
+	if !strings.Contains(result, "Do NOT generate questions semantically similar to these previously generated pairs") {
+		t.Error("ExecuteTemplate() missing exclusion instruction")
+	}
+	if !strings.Contains(result, "Q1") {
+		t.Error("ExecuteTemplate() missing first exclude pair prompt")
+	}
+	if !strings.Contains(result, "Q2") {
+		t.Error("ExecuteTemplate() missing second exclude pair prompt")
+	}
+}
+
+// TestExecuteTemplate_reasoningNoExcludePairs tests that no exclusion section renders when ExcludePairs is nil in reasoning template.
+func TestExecuteTemplate_reasoningNoExcludePairs(t *testing.T) {
+	data := PromptData{
+		DocumentContent: "Test document content.",
+		PairCount:       2,
+		ExcludePairs:    nil,
+	}
+
+	result, err := ExecuteTemplate("reasoning_valid.tmpl", data)
+	if err != nil {
+		t.Fatalf("ExecuteTemplate() error = %v", err)
+	}
+
+	// Verify exclusion section is NOT rendered
+	if strings.Contains(result, "Do NOT generate questions semantically similar to these previously generated pairs") {
+		t.Error("ExecuteTemplate() should not render exclusion section when ExcludePairs is nil")
+	}
+}

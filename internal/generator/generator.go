@@ -28,17 +28,37 @@ type FormatType string
 const (
 	FormatCompletion FormatType = "completion"
 	FormatChat       FormatType = "chat"
+	FormatReasoning  FormatType = "reasoning"
 )
 
-// ParseFormat validates and returns a FormatType from string input.
+type ReasoningFormat string
+
+const (
+	ReasoningFormatSeparate   ReasoningFormat = "separate"
+	ReasoningFormatIntegrated ReasoningFormat = "integrated"
+)
+
+func ParseReasoningFormat(s string) (ReasoningFormat, error) {
+	switch s {
+	case string(ReasoningFormatSeparate):
+		return ReasoningFormatSeparate, nil
+	case string(ReasoningFormatIntegrated):
+		return ReasoningFormatIntegrated, nil
+	default:
+		return "", fmt.Errorf("invalid reasoning format: %s (must be 'separate' or 'integrated')", s)
+	}
+}
+
 func ParseFormat(s string) (FormatType, error) {
 	switch s {
 	case string(FormatCompletion):
 		return FormatCompletion, nil
 	case string(FormatChat):
 		return FormatChat, nil
+	case string(FormatReasoning):
+		return FormatReasoning, nil
 	default:
-		return "", fmt.Errorf("invalid format: %s (must be 'completion' or 'chat')", s)
+		return "", fmt.Errorf("invalid format: %s (must be 'completion', 'chat', or 'reasoning')", s)
 	}
 }
 
@@ -158,6 +178,8 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 	var rawPairs []Pair
 	if g.config.Format == FormatChat {
 		rawPairs = g.parseChatResponse(response)
+	} else if g.config.Format == FormatReasoning {
+		rawPairs = g.parseReasoningResponse(response)
 	} else {
 		rawPairs = g.parseResponse(response)
 	}
@@ -235,6 +257,8 @@ func (g *Generator) Generate(ctx context.Context, doc *processor.Document, split
 		var backfillPairs []Pair
 		if g.config.Format == FormatChat {
 			backfillPairs = g.parseChatResponse(backfillResponse)
+		} else if g.config.Format == FormatReasoning {
+			backfillPairs = g.parseReasoningResponse(backfillResponse)
 		} else {
 			backfillPairs = g.parseResponse(backfillResponse)
 		}
@@ -355,6 +379,17 @@ func (g *Generator) getTemplateName(format FormatType, split SplitType) string {
 		default:
 			return "chat_train.tmpl"
 		}
+	case FormatReasoning:
+		switch split {
+		case SplitTrain:
+			return "reasoning_train.tmpl"
+		case SplitValid:
+			return "reasoning_valid.tmpl"
+		case SplitTest:
+			return "reasoning_test.tmpl"
+		default:
+			return "reasoning_train.tmpl"
+		}
 	default:
 		switch split {
 		case SplitTrain:
@@ -373,6 +408,13 @@ func (g *Generator) getTemplateName(format FormatType, split SplitType) string {
 type chatPair struct {
 	User      string `json:"user"`
 	Assistant string `json:"assistant"`
+}
+
+// reasoningPair represents a reasoning training example with question/reasoning/answer fields.
+type reasoningPair struct {
+	Question  string `json:"question"`
+	Reasoning string `json:"reasoning"`
+	Answer    string `json:"answer"`
 }
 
 func (g *Generator) parseResponse(response string) []Pair {
@@ -460,6 +502,53 @@ func parseChatJSONString(s string) ([]chatPair, error) {
 // parseJSONArrayString parses a string that contains a JSON array
 func parseJSONArrayString(s string) ([]Pair, error) {
 	var pairs []Pair
+	if err := json.Unmarshal([]byte(s), &pairs); err != nil {
+		return nil, err
+	}
+	return pairs, nil
+}
+
+// parseReasoningResponse parses LLM responses in reasoning format into Pair structs.
+// Expected format: [{"question": "...", "reasoning": "...", "answer": "..."}, ...]
+func (g *Generator) parseReasoningResponse(response string) []Pair {
+	var reasoningPairs []reasoningPair
+
+	if len(strings.TrimSpace(response)) == 0 {
+		return nil
+	}
+
+	start := strings.Index(response, "[")
+	end := strings.LastIndex(response, "]")
+
+	if start != -1 && end != -1 && end > start {
+		jsonStr := response[start : end+1]
+
+		if err := json.Unmarshal([]byte(jsonStr), &reasoningPairs); err != nil {
+			var raw interface{}
+			if err2 := json.Unmarshal([]byte(jsonStr), &raw); err2 == nil {
+				if str, ok := raw.(string); ok {
+					if innerPairs, err3 := parseReasoningJSONString(str); err3 == nil {
+						reasoningPairs = innerPairs
+					}
+				}
+			}
+		}
+	}
+
+	var pairs []Pair
+	for _, rp := range reasoningPairs {
+		pairs = append(pairs, Pair{
+			Prompt:     rp.Question,
+			Completion: rp.Reasoning + "\n\n" + rp.Answer,
+		})
+	}
+
+	return pairs
+}
+
+// parseReasoningJSONString parses a string containing a JSON array of reasoningPair objects.
+func parseReasoningJSONString(s string) ([]reasoningPair, error) {
+	var pairs []reasoningPair
 	if err := json.Unmarshal([]byte(s), &pairs); err != nil {
 		return nil, err
 	}

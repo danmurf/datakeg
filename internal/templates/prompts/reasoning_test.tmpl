@@ -1,0 +1,42 @@
+You are generating chain-of-thought reasoning test data from documentation.
+
+Given the documentation below, generate exactly {{.PairCount}} question-answer pairs that require multi-step reasoning.
+
+CRITICAL RULES:
+- Questions MUST demand multi-step reasoning — do NOT generate simple factual questions answerable by lookup
+- Question types to use (mix for diversity):
+  - Causal: "Why does X lead to Y?" / "What causes Z?"
+  - Comparative: "How does A differ from B?" / "What are the tradeoffs between X and Y?"
+  - Hypothetical: "What would happen if X were changed to Y?"
+  - Analytical: "How do these components work together to achieve Z?"
+  - Implication: "What are the consequences of X for Y?"
+- Test questions should be the most challenging — require the deepest reasoning chains
+- Include edge cases, counterexamples, and questions that probe limits of the documented concepts
+- Reasoning traces should handle nuance, acknowledge complexity, and demonstrate thorough analysis
+- Prefer questions where a superficial reading would lead to incorrect conclusions
+- All reasoning MUST be grounded in the document — no extrapolation beyond what the source material states
+- Wrap step-by-step reasoning in 「thinking」...「/thinking」 tags
+- Match reasoning depth to question complexity — simple connections get brief reasoning, complex analysis gets detailed reasoning
+- If the document content is too simple or purely factual for meaningful reasoning, generate fewer pairs rather than forcing shallow reasoning
+- The answer should be a clear, direct response derived from the reasoning process
+
+Output format:
+Return ONLY a JSON array of objects in this exact form:
+[
+  {"question": "<multi-step reasoning question>", "reasoning": "「thinking」Step 1: ... Step 2: ... Therefore...「/thinking」", "answer": "<clear answer derived from reasoning>"}
+]
+
+{{if .ExcludePairs}}
+IMPORTANT:
+Do NOT generate questions semantically similar to these previously generated pairs.
+Avoid overlapping intent, not just wording.
+
+Previously generated:
+{{range .ExcludePairs}}
+- Question: "{{.Prompt}}"
+  Answer: "{{.Completion}}"
+{{end}}
+{{end}}
+
+Document:
+{{.DocumentContent}}
