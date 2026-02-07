@@ -74,6 +74,14 @@ valid.jsonl, and test.jsonl files.`,
 	RunE: runMerge,
 }
 
+var listProvidersCmd = &cobra.Command{
+	Use:   "list-providers",
+	Short: "List available LLM providers and their configuration status",
+	Long: `List available LLM providers and their configuration status.
+Shows whether each provider is configured and lists available models.`,
+	RunE: runListProviders,
+}
+
 func init() {
 	// Persistent flags available to all subcommands
 	RootCmd.PersistentFlags().StringVarP(&flagModel, "model", "m", "gpt-oss:20b", "Model to use (provider-specific)")
@@ -92,6 +100,7 @@ func init() {
 	RootCmd.AddCommand(generateCmd)
 	RootCmd.AddCommand(versionCmd)
 	RootCmd.AddCommand(mergeCmd)
+	RootCmd.AddCommand(listProvidersCmd)
 }
 
 func runGenerate(cmd *cobra.Command, args []string) error {
@@ -116,6 +125,10 @@ func runMerge(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  Output:  %s\n", outputPath)
 
 	return commands.ExecuteMergePipeline(outputPath)
+}
+
+func runListProviders(cmd *cobra.Command, args []string) error {
+	return commands.ExecuteListProviders()
 }
 
 func main() {
