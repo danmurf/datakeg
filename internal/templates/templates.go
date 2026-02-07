@@ -69,11 +69,16 @@ func jsonEscape(s string) string {
 // The name should be one of: "mistral-instruct", "llama3-instruct", "chatml", or "deepseek-r1".
 // The template is loaded from the embedded filesystem.
 func LoadConversionTemplate(name string) (*template.Template, error) {
+	content, err := conversionFS.ReadFile("conversions/" + name + ".tmpl")
+	if err != nil {
+		return nil, fmt.Errorf("read embedded template %s: %w", name, err)
+	}
+
 	tmpl, err := template.New(name).
 		Funcs(template.FuncMap{"jsonEscape": jsonEscape}).
-		ParseFS(conversionFS, "conversions/"+name+".tmpl")
+		Parse(string(content))
 	if err != nil {
-		return nil, fmt.Errorf("parse embedded template %s: %w", name, err)
+		return nil, fmt.Errorf("parse template %s: %w", name, err)
 	}
 	return tmpl, nil
 }

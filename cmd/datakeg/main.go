@@ -30,19 +30,23 @@ train/valid/test JSONL files.`,
 
 // Configuration flags for the generate command.
 var (
-	flagProvider        string
-	flagModel           string
-	flagFormat          string
-	flagSystemMessage   string
-	flagReasoningFormat string
-	flagTrainPct        float64
-	flagValidPct        float64
-	flagTestPct         float64
-	flagPairsPer1K      float64
-	flagTimeout         int
-	flagSkipMerge       bool
-	flagYes             bool
-	flagDryRun          bool
+	flagProvider              string
+	flagModel                 string
+	flagFormat                string
+	flagSystemMessage         string
+	flagReasoningFormat       string
+	flagTrainPct              float64
+	flagValidPct              float64
+	flagTestPct               float64
+	flagPairsPer1K            float64
+	flagTimeout               int
+	flagSkipMerge             bool
+	flagYes                   bool
+	flagDryRun                bool
+	flagConvertTemplate       string
+	flagConvertCustomTemplate string
+	flagConvertSourceFormat   string
+	flagConvertListTemplates  bool
 )
 
 var generateCmd = &cobra.Command{
@@ -85,6 +89,24 @@ Shows whether each provider is configured and lists available models.`,
 	RunE: runListProviders,
 }
 
+var convertCmd = &cobra.Command{
+	Use:   "convert <input.jsonl> <output.jsonl>",
+	Short: "Convert JSONL files to model-specific training formats",
+	Long: `Convert generated JSONL files into model-specific training formats
+using built-in or custom conversion templates.
+
+Supports auto-detection of source format (completion, chat, reasoning) from the
+JSONL structure. Use --template for built-in formats or --custom-template for
+your own template files.
+
+Examples:
+  datakeg convert --template mistral-instruct train.jsonl train_mistral.jsonl
+  datakeg convert --custom-template my-format.tmpl train.jsonl train_custom.jsonl
+  datakeg convert --list-templates`,
+	Args: cobra.RangeArgs(0, 2),
+	RunE: runConvert,
+}
+
 func init() {
 	// Persistent flags available to all subcommands
 	RootCmd.PersistentFlags().StringVarP(&flagModel, "model", "m", "gpt-oss:20b", "Model to use (provider-specific)")
@@ -103,10 +125,17 @@ func init() {
 	generateCmd.Flags().StringVarP(&flagSystemMessage, "system-message", "", "", "System message to include in chat format output")
 	generateCmd.Flags().StringVarP(&flagReasoningFormat, "reasoning-format", "", "separate", "Reasoning output format: 'separate' (question/reasoning/answer fields) or 'integrated' (prompt/completion with inline tags)")
 
+	// Convert command flags
+	convertCmd.Flags().StringVarP(&flagConvertTemplate, "template", "t", "", "Built-in conversion template name (e.g., mistral-instruct)")
+	convertCmd.Flags().StringVarP(&flagConvertCustomTemplate, "custom-template", "", "", "Path to custom conversion template file")
+	convertCmd.Flags().StringVarP(&flagConvertSourceFormat, "source-format", "", "", "Source JSONL format (completion, chat, reasoning). Auto-detected if omitted")
+	convertCmd.Flags().BoolVarP(&flagConvertListTemplates, "list-templates", "l", false, "List available built-in conversion templates")
+
 	RootCmd.AddCommand(generateCmd)
 	RootCmd.AddCommand(versionCmd)
 	RootCmd.AddCommand(mergeCmd)
 	RootCmd.AddCommand(listProvidersCmd)
+	RootCmd.AddCommand(convertCmd)
 }
 
 func runGenerate(cmd *cobra.Command, args []string) error {
@@ -142,6 +171,47 @@ func runMerge(cmd *cobra.Command, args []string) error {
 
 func runListProviders(cmd *cobra.Command, args []string) error {
 	return commands.ExecuteListProviders()
+}
+
+func runConvert(cmd *cobra.Command, args []string) error {
+	// Handle --list-templates
+	if flagConvertListTemplates {
+		return commands.ListBuiltinTemplates()
+	}
+
+	// Normal conversion requires exactly 2 args
+	if len(args) != 2 {
+		return fmt.Errorf("convert requires exactly 2 arguments: <input.jsonl> <output.jsonl>\nRun 'datakeg convert --help' for usage")
+	}
+
+	inputPath := args[0]
+	outputPath := args[1]
+
+	// Require either --template or --custom-template
+	if flagConvertTemplate == "" && flagConvertCustomTemplate == "" {
+		return fmt.Errorf("specify a template with --template <name> or --custom-template <file>\nRun 'datakeg convert --list-templates' to see available templates")
+	}
+
+	// Cannot use both
+	if flagConvertTemplate != "" && flagConvertCustomTemplate != "" {
+		return fmt.Errorf("specify either --template or --custom-template, not both")
+	}
+
+	fmt.Printf("Convert command invoked with:\n")
+	fmt.Printf("  Input:  %s\n", inputPath)
+	fmt.Printf("  Output: %s\n", outputPath)
+	if flagConvertTemplate != "" {
+		fmt.Printf("  Template: %s (built-in)\n", flagConvertTemplate)
+	} else {
+		fmt.Printf("  Template: %s (custom)\n", flagConvertCustomTemplate)
+	}
+	if flagConvertSourceFormat != "" {
+		fmt.Printf("  Source format: %s\n", flagConvertSourceFormat)
+	} else {
+		fmt.Printf("  Source format: (auto-detect)\n")
+	}
+
+	return commands.ExecuteConvertPipeline(inputPath, outputPath, flagConvertTemplate, flagConvertCustomTemplate, flagConvertSourceFormat)
 }
 
 func main() {
