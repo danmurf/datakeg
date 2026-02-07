@@ -1,1 +1,1 @@
-{"text": "{{range .Messages}}<|im_start|>{{.Role}}\n{{.Content}}<|im_end|>\n{{end}}"}
+{"text": "{{range .Messages}}<|im_start|>{{.Role}}\n{{jsonEscape .Content}}<|im_end|>\n{{end}}"}
