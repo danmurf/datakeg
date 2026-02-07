@@ -13,7 +13,19 @@ Dependabot is configured to check for updates daily at 06:00 UTC:
 - GitHub Actions updates are grouped into one PR
 - All updates are labeled with `dependencies` and their ecosystem type
 
-## Build and Test Commands
+## Mandatory Verification After Changes
+
+**After any code changes, you MUST run both linter and tests:**
+
+```bash
+# Run linter first
+make lint
+
+# Then run tests
+make test
+```
+
+Do not commit or submit code until both commands pass without errors.
 
 ```bash
 # Build the binary (builds to ./datakeg)

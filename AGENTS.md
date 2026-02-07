@@ -2,7 +2,19 @@
 
 This file provides guidance for agentic coding agents working with the datakeg codebase.
 
-## Build and Test Commands
+## Mandatory Verification After Changes
+
+**After any code changes, you MUST run both linter and tests:**
+
+```bash
+# Run linter first
+make lint
+
+# Then run tests
+make test
+```
+
+Do not commit or submit code until both commands pass without errors.
 
 ### Build Commands
 ```bash
