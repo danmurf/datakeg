@@ -85,7 +85,7 @@ Plans:
 - [x] 03-03-PLAN.md — UX improvements and error handling
 
 ### Phase 4: Multi-Provider Support
-**Goal**: Users can choose between Ollama and OpenRouter (with any model) for pair generation, with secure API key storage
+**Goal**: Users can choose between Ollama and OpenRouter (with any model) for pair generation, with secure API key storage and cost transparency
 
 **Depends on**: Phase 3
 
@@ -98,10 +98,12 @@ Plans:
   4. Generator is provider-agnostic — uses a common interface, not coupled to Ollama directly
   5. Existing Ollama workflow continues to work as default with no breaking changes
 
-**Plans:** 0 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 4 to break down)
+- [ ] 04-01-PLAN.md — Provider interface, Ollama wrapper, Generator refactor, --provider flag
+- [ ] 04-02-PLAN.md — OpenRouter provider with retry, cost estimation, confirmation, --yes, --dry-run
+- [ ] 04-03-PLAN.md — list-providers subcommand and comprehensive tests
 
 ### Phase 5: Chat Format Support
 **Goal**: Users can generate chat-style training data (messages with role/content) in addition to the existing prompt/completion format
@@ -170,11 +172,11 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Core Pipeline | 3/3 | ✓ Complete | 2026-02-05 |
 | 2. Smart Generation | 3/3 | ✓ Complete | 2026-02-06 |
 | 3. Production Ready | 3/3 | ✓ Complete | 2026-02-06 |
-| 4. Multi-Provider Support | 0/? | Not Started | — |
+| 4. Multi-Provider Support | 0/3 | Not Started | — |
 | 5. Chat Format Support | 0/? | Not Started | — |
 | 6. Reasoning Format Support | 0/? | Not Started | — |
 | 7. Claude Provider Support | 0/? | Not Started | — |
 
 ---
 *Roadmap created: 2025-02-05*
-*Last updated: 2026-02-07 (Phase 7 added)*
+*Last updated: 2026-02-07 (Phase 4 planned)*
