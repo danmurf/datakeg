@@ -7,7 +7,7 @@
 *.dll
 *.so
 *.dylib
-datakeg
+/datakeg
 
 # Test binary, built with `go test -c`
 *.test
