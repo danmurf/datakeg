@@ -71,12 +71,10 @@ func ExecuteGeneratePipeline(
 	}
 	gen := generator.NewGenerator(p, genConfig)
 
-	// Cost estimation and confirmation for paid providers
+	// Warning for paid providers
 	if providerType == string(provider.ProviderOpenRouter) {
-		// Estimate cost using rough OpenRouter average pricing ($1/M prompt, $2/M completion)
-		estimatedCost := cost.EstimateRunCost(documents, pairsPer1K, 1.0, 2.0)
-		fmt.Printf("\nEstimated cost: $%.4f\n", estimatedCost)
-		fmt.Println("Actual cost may differ. You are responsible for all API charges.")
+		fmt.Println("\nWARNING: Using OpenRouter may incur API costs.")
+		fmt.Println("You are responsible for all charges incurred through your API usage.")
 		fmt.Println()
 
 		if dryRun {
@@ -265,7 +263,8 @@ func ExecuteGeneratePipeline(
 
 	// Post-run summary for paid providers
 	if providerType == string(provider.ProviderOpenRouter) {
-		fmt.Printf("\n%s\n", usageTracker.Summary())
+		fmt.Printf("\nTokens used: %d prompt + %d completion = %d total\n",
+			usageTracker.TotalPromptTokens, usageTracker.TotalCompletionTokens, usageTracker.TotalTokens)
 	}
 
 	return nil

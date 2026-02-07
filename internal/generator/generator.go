@@ -372,16 +372,22 @@ func validatePair(p Pair) bool {
 	return strings.TrimSpace(p.Prompt) != "" && strings.TrimSpace(p.Completion) != ""
 }
 
-// deduplicatePairs removes exact duplicate pairs. A pair is a duplicate if both
-// prompt AND completion match a previously seen pair (case-sensitive).
-// Uses map[string]struct{} as a hash set with "prompt|||completion" as key.
+// deduplicatePairs removes exact duplicate pairs and also removes pairs with duplicate prompts.
+// A pair is a duplicate if both prompt AND completion match a previously seen pair (case-sensitive),
+// OR if the prompt matches exactly (regardless of completion).
+// Uses map[string]struct{} as hash sets with "prompt|||completion" and "prompt" as keys.
 func deduplicatePairs(pairs []Pair) []Pair {
 	seen := make(map[string]struct{})
+	seenPrompts := make(map[string]struct{})
 	var result []Pair
 	for _, p := range pairs {
 		key := fmt.Sprintf("%s|||%s", p.Prompt, p.Completion)
-		if _, exists := seen[key]; !exists {
+		promptKey := p.Prompt
+		_, keyExists := seen[key]
+		_, promptExists := seenPrompts[promptKey]
+		if !keyExists && !promptExists {
 			seen[key] = struct{}{}
+			seenPrompts[promptKey] = struct{}{}
 			result = append(result, p)
 		}
 	}
@@ -389,21 +395,23 @@ func deduplicatePairs(pairs []Pair) []Pair {
 }
 
 // deduplicateAgainstExclusions removes pairs that match entries in excludePairs.
-// A pair matches if both prompt AND completion are identical (case-sensitive).
-// Unlike deduplicatePairs, this does NOT deduplicate within the input pairs.
+// A pair matches if both prompt AND completion are identical (case-sensitive),
+// OR if the prompt matches exactly (regardless of completion).
 func deduplicateAgainstExclusions(pairs []Pair, excludePairs []Pair) []Pair {
-	// Build a set of excluded pair keys
 	excluded := make(map[string]struct{})
+	excludedPrompts := make(map[string]struct{})
 	for _, ep := range excludePairs {
 		key := fmt.Sprintf("%s|||%s", ep.Prompt, ep.Completion)
 		excluded[key] = struct{}{}
+		excludedPrompts[ep.Prompt] = struct{}{}
 	}
 
-	// Filter out pairs that are in the exclusion set
 	var result []Pair
 	for _, p := range pairs {
 		key := fmt.Sprintf("%s|||%s", p.Prompt, p.Completion)
-		if _, exists := excluded[key]; !exists {
+		_, keyExists := excluded[key]
+		_, promptExists := excludedPrompts[p.Prompt]
+		if !keyExists && !promptExists {
 			result = append(result, p)
 		}
 	}

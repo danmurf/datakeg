@@ -553,9 +553,9 @@ func TestDeduplicatePairs(t *testing.T) {
 			expected: []Pair{{Prompt: "Q1", Completion: "A1"}},
 		},
 		{
-			name:     "same prompt, different completion - both kept",
+			name:     "same prompt, different completion - only first kept",
 			pairs:    []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q1", Completion: "A2"}},
-			expected: []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q1", Completion: "A2"}},
+			expected: []Pair{{Prompt: "Q1", Completion: "A1"}},
 		},
 		{
 			name:     "different prompt, same completion - both kept",
@@ -632,10 +632,10 @@ func TestDeduplicateAgainstExclusions(t *testing.T) {
 			expectedPairs: []Pair{{Prompt: "Q2", Completion: "A2"}},
 		},
 		{
-			name:          "same prompt different completion - only matching completion excluded",
+			name:          "same prompt different completion - excluded by prompt match",
 			pairs:         []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q1", Completion: "A2"}},
 			excludePairs:  []Pair{{Prompt: "Q1", Completion: "A1"}},
-			expectedPairs: []Pair{{Prompt: "Q1", Completion: "A2"}},
+			expectedPairs: []Pair{},
 		},
 		{
 			name:          "same completion different prompt - only matching prompt excluded",
@@ -656,7 +656,7 @@ func TestDeduplicateAgainstExclusions(t *testing.T) {
 			expectedPairs: []Pair{},
 		},
 		{
-			name:          "duplicate pairs - duplicates preserved after exclusion filtering",
+			name:          "duplicate pairs - duplicates preserved, no exclusions",
 			pairs:         []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q1", Completion: "A1"}},
 			excludePairs:  []Pair{},
 			expectedPairs: []Pair{{Prompt: "Q1", Completion: "A1"}, {Prompt: "Q1", Completion: "A1"}},
