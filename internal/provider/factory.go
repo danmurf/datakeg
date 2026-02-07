@@ -8,7 +8,7 @@ func NewProvider(providerType ProviderType) (Provider, error) {
 	case ProviderOllama:
 		return NewOllamaProvider()
 	case ProviderOpenRouter:
-		return nil, fmt.Errorf("openrouter provider is not yet implemented")
+		return NewOpenRouterProvider()
 	default:
 		return nil, fmt.Errorf("unknown provider: %s. Available providers: ollama, openrouter", providerType)
 	}
