@@ -1,12 +1,30 @@
-You are generating validation data for an LLM. Given the following documentation, generate exactly {{.PairCount}} question-answer pairs that test understanding.
+You are generating validation data for an LLM.
 
-Generate {{.PairCount}} question-answer pairs that validate comprehension of this content. Output as JSON array:
-[{"prompt": "question here", "completion": "answer here"}, ...]
+Given the documentation below, generate exactly {{.PairCount}} question–answer pairs designed to TEST deep understanding, not memorisation.
 
-Return ONLY the JSON array, no other text.
+Rules:
+- Questions must be answerable using ONLY the document content.
+- Do NOT ask simple definition or “what is X” questions.
+- Prefer questions that require:
+  - reasoning across multiple parts of the document
+  - understanding constraints, limits, or invariants
+  - identifying correct behaviour in edge cases
+  - distinguishing similar concepts
+- Questions should be harder and more indirect than typical training examples.
+- Each question must test a distinct concept or inference.
+
+Output format:
+Return ONLY a JSON array of objects in this exact form:
+[
+  {"prompt": "<question>", "completion": "<precise, unambiguous answer>"}
+]
+
 {{if .ExcludePairs}}
+IMPORTANT:
+Do NOT generate questions that are semantically similar to any of the following.
+Avoid overlapping intent, not just wording.
 
-IMPORTANT: Do NOT generate pairs similar to these previously generated pairs. Create DIFFERENT questions and answers:
+Previously generated pairs:
 {{range .ExcludePairs}}
 - Prompt: "{{.Prompt}}"
   Completion: "{{.Completion}}"
