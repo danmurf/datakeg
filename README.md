@@ -19,6 +19,17 @@
 
 datakeg processes markdown and text files from a source directory, generates question-answer pairs using Ollama, and outputs structured JSONL files ready for training, validation, and testing.
 
+## ⚠️ Inference Costs
+
+**You are responsible for all inference costs incurred while using this tool.**
+
+This tool makes calls to LLM models to generate training data. Depending on your setup and model selection, this may result in costs including but not limited to:
+- API or usage fees from your LLM provider
+- Computational costs from model inference
+- Token-based charges from commercial models
+
+Review your configuration and model choices before running datakeg. The tool itself is free, but the models it invokes may not be. Use responsibly and monitor your usage.
+
 ## Features
 
 - Process markdown (`.md`) and text (`.txt`) files automatically
