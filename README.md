@@ -19,6 +19,8 @@
 
 datakeg processes markdown and text files from a source directory, generates question-answer pairs using LLM providers, and outputs structured JSONL files ready for training, validation, and testing. Generated data can then be converted into model-specific training formats using built-in or custom templates.
 
+> **Note:** This is an experimental hobby project and is not intended for production use. Contributions, suggestions, and feedback are welcome!
+
 ## Inference Costs
 
 **You are responsible for all inference costs incurred while using this tool.**
@@ -40,7 +42,6 @@ Review your configuration and model choices before running datakeg. The tool its
 - Convert generated JSONL into model-specific training formats (Mistral Instruct, Llama 3, ChatML, DeepSeek-R1)
 - Custom conversion templates for any model format
 - Configurable pair density, split percentages, and timeouts
-- Cost estimation with `--dry-run` for cloud providers
 
 ## Prerequisites
 
@@ -99,7 +100,6 @@ datakeg generate [flags] <source> <output>
 | `--test-pct` | Test set percentage (0.0-1.0) | `0.2` |
 | `--skip-merge` | Output per-document files only, skip merge | `false` |
 | `-t, --timeout` | Per-document timeout in minutes | `60` |
-| `--dry-run` | Print cost estimate and exit (cloud providers) | `false` |
 | `-y, --yes` | Skip confirmation prompts | `false` |
 
 **Global flags (available on all commands):**
@@ -129,9 +129,6 @@ datakeg generate --provider openrouter --model anthropic/claude-sonnet-4-5-20250
 
 # Per-document files without merging
 datakeg generate --skip-merge ./docs ./output
-
-# Cost estimate only
-datakeg generate --provider openrouter --dry-run ./docs ./output
 ```
 
 ### convert
