@@ -5,7 +5,7 @@
 <h1 align="center">datakeg</h1>
 
 <p align="center">
-  A command-line tool that transforms raw documentation into LLM training datasets.
+  A command-line tool that generates synthetic training data from raw documentation.
 </p>
 
 <div align="center">
@@ -66,7 +66,7 @@ make install
 ## Quick Start
 
 ```bash
-# Generate training data from documentation
+# Generate synthetic training data from documentation
 datakeg generate ./docs ./output
 
 # Generate chat-format training data

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-datakeg transforms raw documentation into LLM training datasets. It processes markdown/text files, generates question-answer pairs using Ollama models, and outputs train/valid/test JSONL files.
+datakeg generates synthetic training data from raw documentation. It processes markdown/text files, generates question-answer pairs using LLM models, and outputs train/valid/test JSONL files.
 
 ## Dependency Management
 
