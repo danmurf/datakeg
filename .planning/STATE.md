@@ -74,8 +74,6 @@ None.
 - Phase 6 added: Reasoning Format Support (chain-of-thought training data for reasoning models)
 - Phase 7 added: Format Conversion (convert generated JSONL to model-specific training formats via templates)
 - **COMPLETED**: Phase 7 - Format Conversion with `datakeg convert` command
-- Phase 8 added: Claude Provider Support (Anthropic API provider via Claude subscription)
-- Phases 7 and 8 swapped: Format Conversion moved ahead of Claude Provider Support
 
 ### Blockers/Concerns
 

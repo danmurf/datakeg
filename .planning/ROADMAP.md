@@ -19,7 +19,6 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 5: Chat Format Support** - Chat-style training data with messages/roles JSONL output
 - [ ] **Phase 6: Reasoning Format Support** - Chain-of-thought training data for reasoning models
 - [ ] **Phase 7: Format Conversion** - Convert generated JSONL to model-specific training formats via templates
-- [ ] **Phase 8: Claude Provider Support** - Anthropic API provider for generating data via Claude subscription
 
 ## Phase Details
 
@@ -166,29 +165,10 @@ Plans:
 - [ ] 07-01-PLAN.md — Converter package, conversion templates, template loader with jsonEscape
 - [ ] 07-02-PLAN.md — CLI convert command, flag registration, end-to-end wiring
 
-### Phase 8: Claude Provider Support
-**Goal**: Users can generate training data using their Anthropic API key / Claude subscription, leveraging the provider abstraction from Phase 4
-
-**Depends on**: Phase 4
-
-**Requirements**: TBD during planning
-
-**Success Criteria** (what must be TRUE):
-  1. User runs `datakeg generate --provider claude --model claude-sonnet-4-5-20250929 <source> <output>` and pairs are generated via the Anthropic API
-  2. Anthropic API key is stored securely via the same key management system from Phase 4
-  3. Claude provider implements the same provider interface as Ollama and OpenRouter — no special-casing in the generator
-  4. User can select any available Claude model (Haiku, Sonnet, Opus, etc.)
-  5. All output formats (completion, chat, reasoning) work with the Claude provider
-
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd:plan-phase 8 to break down)
-
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -199,7 +179,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Chat Format Support | 0/? | Not Started | — |
 | 6. Reasoning Format Support | 0/2 | Not Started | — |
 | 7. Format Conversion | 0/2 | Not Started | — |
-| 8. Claude Provider Support | 0/? | Not Started | — |
 
 ---
 *Roadmap created: 2025-02-05*
